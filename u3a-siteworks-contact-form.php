@@ -3,7 +3,7 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.0.0'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.0.1'); // Set to current plugin version number
 
 // Use the plugin update service on SiteWorks update server
 
@@ -203,8 +203,9 @@ function u3a_contact_form_shortcode($atts)
     }
     $to = $addressee . ' <' . $email . '>';
     $reply_to = $returnName . ' <' . $returnEmail . '>';
-    $prefix = "<p>This message was sent from $returnName ( $returnEmail ) via the $orgname web site ...\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
-    $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site ...\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
+    $separatorLine = "\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
+    $prefix = "<p>The following message was sent via the $orgname web site. It was addressed to $addressee. Please reply to $returnName ( $returnEmail ).$separatorLine";
+    $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site.$separatorLine";
 
     // replace eols in text with HTML line breaks
     $messageHTML = '<p>' . str_replace(PHP_EOL, '<br/>', $messageText) . '</p>';

@@ -50,6 +50,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.0.1 =
+* Bug 987 - Amend start of email message text to include the addressee. (Nov 2023)
 = 1.0.0 =
 * First production code release
 * Tested up to WordPress 6.4
