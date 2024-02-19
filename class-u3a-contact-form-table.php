@@ -38,18 +38,21 @@ class U3aEmailContactsTable
     /**
      * Find a matching contact instance, or add a record
      *    Returns the id of the record.
-     *    the 'blocked' attribute is not set, and is for future use! 
+     *    The 'blocked' attribute is not set, and is for future use!
+     *    The nonce attribute is not used, and is set to 123456!
      */
     public static function find_or_add_contact_instance($addressee, $email, $source_url) {
         
         global $wpdb;
+        var_dump($addressee, $email, $source_url);
         $table_name = $wpdb->prefix . 'u3a_email_contacts';
         $results = $wpdb->get_results(
                      $wpdb->prepare(
-                       "SELECT 'id' FROM $table_name WHERE 'addressee' = %s " . 
-                       "AND 'email' = %s AND 'source_url' = %s",
+                       "SELECT id FROM $table_name WHERE addressee = %s " . 
+                       "AND email = %s AND source_url = %s",
                        [$addressee, $email, $source_url]
                    ));
+        var_dump($results);
         if (null != $results) {
             return $results[0]->id;
         }
@@ -60,7 +63,7 @@ class U3aEmailContactsTable
                 'addressee' => $addressee,
                 'email' => $email,
                 'source_url' => $source_url,
-                'nonce' => wp_rand(),
+                'nonce' => 123456,
                 'created' => time(), 
             ), 
             array( 
