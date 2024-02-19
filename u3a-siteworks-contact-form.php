@@ -164,14 +164,14 @@ function u3a_contact_form_shortcode($atts)
     if (null === $contact) {
         return '<p>Sorry, the link you used is no longer valid. Please try later.</p>';
     }
+    $email = $contact->email;
+    $addressee = $contact->addressee;
     if (!isset($_POST['messageSubject'])) {
         // Not a response to the page, show email form with initial values
         return show_u3a_contact_form($addressee, '', '', '', '', '', $contact->nonce);
     }
 
     // Process response to the page
-    $email = $contact->email;
-    $addressee = $contact->addressee;
 
     // Get text from form if present
     $messageText = empty($_POST['messageText']) ? '' : sanitize_textarea_field($_POST['messageText']);
@@ -193,7 +193,7 @@ function u3a_contact_form_shortcode($atts)
     }
 
     // Response validated, set up the email and optional copy to logged in user
-    
+
     // TBD can we deal with adding suffix 'u3a' somewhere else?
     $orgname = html_entity_decode(get_bloginfo('name'));
     // add suffix u3a unless already present
@@ -220,13 +220,14 @@ function u3a_contact_form_shortcode($atts)
     $copy_message_headers = array(
         'From: ' . $fromName . ' <' . $fromEmail . '>',
     );
-    // In case php_mailer_init is used, set FromName in a filter with priority that will be run last.
-    global $u3a_contact_form_fromname; // just for use in filter!
-    $u3a_contact_form_fromname = $fromName; 
-    add_action('phpmailer_init', 'u3a_contact_form_set_fromname', 99);
+    // In case php_mailer_init is used, set FromName in an action with priority that will be run last.
+    add_action('phpmailer_init',
+                function($phpmailer) use ($fromName) {
+                    $phpmailer->FromName = $fromName;
+                }, 99);
 
-    // Now send the email(s)
-    
+    // Now send the email(s) and return a result message
+
     $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
     if ('ok' == $status) {
         $result_message = '<p>Message sent to recipient.</p>';
@@ -296,7 +297,7 @@ END;
     </div>
     <div>
         <label for="messageText">Your message: </label>
-        <textarea name="messageText" id="messageText" rows="10">' . $messageText . '</textarea>
+        <textarea name="messageText" id="messageText" rows="10">$messageText</textarea>
     </div>
     $copyHtml 
     <p class="hasSubmit"><button class="wp-element-button" id="submitButton" name="sendEmail" type="submit">Send your email</button></p>
@@ -356,40 +357,15 @@ END;
 </body>
 </html>
 END;
-    // append header specifying content type (default is text/plain)
-    //$headers[] = 'Content-Type: text/html; charset=UTF-8';
-    add_filter('wp_mail_content_type', 'u3a_set_wpmail_type');
-    // generate plain text alt body from the html
-    add_action( 'phpmailer_init','u3a_add_plain_text_body');
-    $result = wp_mail($to, $messageSubject, $html_start.$messageText.$html_end, $headers);
-    remove_filter('wp_mail_content_type', 'u3a_set_wpmail_type');
+    // Append header specifying content type (default is text/plain)
+    $headers[] = 'Content-Type: text/html; charset=UTF-8';
+    // Generate plain text alt body from the html
+    add_action('phpmailer_init',
+                function ($phpmailer) {
+                    $phpmailer->AltBody = wp_strip_all_tags(str_replace('<br/>', PHP_EOL,$phpmailer->Body));
+               });
+    $result = wp_mail($to, $messageSubject, $html_start . $messageText . $html_end, $headers);
     return (true === $result) ? 'ok' : 'wp_mail error';
-}
-
-/**
- * Helper function to set wp_mail content type
- */
-function u3a_set_wpmail_type()
-{
-    return 'text/html';
-}
-
-/**
- * Helper function to ad plain text alternative email content
- */
-function u3a_add_plain_text_body($phpmailer)
-{
-    $phpmailer->AltBody = wp_strip_all_tags( $phpmailer->Body );
-}
-
-/**
- * Helper function to set email FromName.
- * Uses global variable $u3a_contact_form_fromname
- */
-function u3a_contact_form_set_fromname($phpmailer)
-{
-    global $u3a_contact_form_fromname;
-    $phpmailer->FromName = $u3a_contact_form_fromname;
 }
 
 /**
