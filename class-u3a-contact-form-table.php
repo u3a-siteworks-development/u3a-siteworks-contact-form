@@ -36,14 +36,24 @@ class U3aEmailContactsTable
     }
 
     /**
-     * Add a contact instance
-     *    Returns the id of the added record.
+     * Find a matching contact instance, or add a record
+     *    Returns the id of the record.
      *    the 'blocked' attribute is not set, and is for future use! 
      */
-    public static function add_contact_instance( $addressee, $email, $source_url) {
+    public static function find_or_add_contact_instance($addressee, $email, $source_url) {
         
         global $wpdb;
         $table_name = $wpdb->prefix . 'u3a_email_contacts';
+        $results = $wpdb->get_results(
+                     $wpdb->prepare(
+                       "SELECT 'id' FROM $table_name WHERE 'addressee' = %s " . 
+                       "AND 'email' = %s AND 'source_url' = %s",
+                       [$addressee, $email, $source_url]
+                   ));
+        if (null != $results) {
+            return $results[0]->id;
+        }
+        // otherwise insert a new record
         $wpdb->insert( 
             $table_name, 
             array( 

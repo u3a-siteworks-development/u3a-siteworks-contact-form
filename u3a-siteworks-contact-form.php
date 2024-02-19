@@ -132,11 +132,7 @@ function u3a_contact_shortcode($atts, $content = null)
     $source_url = home_url($wp->request);
     // ideally we could add any query parameters but the following line adds unnecessary ones
     // $source_url = add_query_arg( $wp->query_vars, home_url( $wp->request ) );
-    $contact_id = U3aEmailContactsTable::add_contact_instance($addressee, $email, $source_url);
-
-    // delete stale database contact instances (that were never used), just to tidy up.
-    // done here in case the contact form is not visited.
-    U3aEmailContactsTable::clear_old_contact_instances();
+    $contact_id = U3aEmailContactsTable::find_or_add_contact_instance($addressee, $email, $source_url);
 
     $link = get_bloginfo('url') . '/' . U3A_CONTACT_PAGE_SLUG . '?contact_id=' . $contact_id;
     $link = esc_url($link);
@@ -166,50 +162,39 @@ function u3a_contact_form_shortcode($atts)
     $contact_id = $_GET['contact_id'];
     $contact = U3aEmailContactsTable::get_contact_instance($contact_id);
     if (null === $contact) {
-        return '<p>You appear to have already sent your message.</p>
-        <p>If you need to send another message please use the website menu to revisit the page which contained the contact link.<br>
-        Do not try using your browser back-button as this will not work.</p>';
+        return '<p>Sorry, the link you used is no longer valid. Please try later.</p>';
     }
-    if ((time() - $contact->created) > 60 * 90) {
-        return '<p>Sorry, the link you used is more than 90 minutes old.
-                <a href= "' . $contact->source_url . '">Click here </a> and try again.</p>';
-    }
-    $email = $contact->email;
-    $addressee = $contact->addressee;
     if (!isset($_POST['messageSubject'])) {
         // Not a response to the page, show email form with initial values
         return show_u3a_contact_form($addressee, '', '', '', '', '', $contact->nonce);
     }
 
     // Process response to the page
-    $nonce = empty($_POST['nonce']) ? '' : $_POST['nonce'];
-    if (empty($_POST['nonce']) || ($_POST['nonce'] !== $contact->nonce)) {
-        return '<p>Sorry, the link you used is not valid.
-                <a href= "' . $contact->source_url . '">Click here </a> and try again.</p>';
-    }
+    $email = $contact->email;
+    $addressee = $contact->addressee;
 
     // Get text from form if present
     $messageText = empty($_POST['messageText']) ? '' : sanitize_textarea_field($_POST['messageText']);
     $messageSubject = empty($_POST['messageSubject']) ? '' : sanitize_text_field($_POST['messageSubject']);
     $returnName = empty($_POST['returnName']) ? '' : sanitize_text_field($_POST['returnName']);
     $returnEmail = empty($_POST['returnEmail']) ? '' : sanitize_email($_POST['returnEmail']);
-
-    // Need to strip slashes?
+    // Need to strip slashes? Was backslash added to apostrophe in test string?
     $u3aMQDetect = $_POST['u3aMQDetect'];
-    $needStripSlashes = (strlen($u3aMQDetect) > 5) ? true : false; // backslash added to apostrophe in test string?
+    $needStripSlashes = (strlen($u3aMQDetect) > 5) ? true : false;
     if ($needStripSlashes) {
         $messageText = stripslashes($messageText);
         $messageSubject = stripslashes($messageSubject);
     }
 
     // Validate the response
-    $errorMessage = validate_u3a_contact_form();
-    if ($errorMessage != '') {
-        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $errorMessage, $contact->nonce);
+    $message = validate_u3a_contact_form();
+    if ('ok' != $message) {
+        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $message, $contact->nonce);
     }
 
-    // Response validated, send the email
-
+    // Response validated, set up the email and optional copy to logged in user
+    
+    // TBD can we deal with adding suffix 'u3a' somewhere else?
     $orgname = html_entity_decode(get_bloginfo('name'));
     // add suffix u3a unless already present
     if (strtolower(substr($orgname, -3)) != 'u3a') {
@@ -240,31 +225,41 @@ function u3a_contact_form_shortcode($atts)
     $u3a_contact_form_fromname = $fromName; 
     add_action('phpmailer_init', 'u3a_contact_form_set_fromname', 99);
 
-    $return = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
-    if (empty($return)) {
-        // successful send to addressee, so delete this contact instance so that it cannot be reused.
-        U3aEmailContactsTable::delete_contact_instance($contact_id);
+    // Now send the email(s)
+    
+    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
+    if ('ok' == $status) {
+        $result_message = '<p>Message sent to recipient.</p>';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
-            // TODO? Should we check wp_get_current_user()->user_email is the same as $returnEmail?
-            if (u3a_contact_mail($reply_to, $messageSubject, $copyPrefix . $messageHTML, $copy_message_headers) == '') {
-                $result_message = '<p>Messages sent successfully.</p>';
+            // Only send user a copy if they have used their own email address.
+            if (wp_get_current_user()->user_email == $returnEmail) {
+                // send user a copy
+                $status = u3a_contact_mail($reply_to, $messageSubject,
+                                           $copyPrefix . $messageHTML, $copy_message_headers);
+                if ('ok'== $status) {
+                    $result_message .= '<p>Message copy sent to you.</p>';
+                } else {
+                    $result_message .=
+                        '<p>There was a problem sending you a message copy.</p>';
+                }
             } else {
-                $result_message =
-                    '<p>Sorry there was a problem sending you a message copy.' .
-                    'The message to the recipient was sent successfully.</p>';
+                $result_message .=
+                    '<p>Note: The email address you entered does not match your logged in email address,' .
+                    ' and no copy has been sent to you.</p>';
             }
-        } else {  // user not to be sent a copy
-            $result_message = '<p>Message sent successfully.</p>';
         }
     } else {
         $result_message =
-            '<p>Sorry there was a problem sending your message.  Please try again later.</p>';
+            '<p>Sorry there was a problem sending your message. Please try again later.</p>';
     }
     return $result_message;
 }
 
 /**
  * Returns an HTML form for sending an email message to an addressee, possibly with an error message.
+ * 
+ * @param str $nonce not used in this version
+ * @return str HMTL including a form
  * @usedby: u3a_email_contact_shortcode
  */
 
@@ -277,12 +272,12 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     if ('' != $errorMessage) {
         $html .= '<p style="color: #f00; font-weight: bold;">' . $errorMessage . '</p>';
     }
-    $html .= '
+    $html .= <<< END
 <form id="mailContact" method="post">
-  <input type="hidden" id="nonce" name="nonce" value="' . $nonce . '"/>
-  <input type="hidden" name="u3aMQDetect" value="test' . "'" . '\">
+  <input type="hidden" name="u3aMQDetect" value="test'">
   <div id="show-u3a-contact" class="u3aform">
-    ';
+    '
+END;
     $copyHtml = '';
     if (is_user_logged_in()) {
         $copyHtml = '<div><label for="sendCopy">Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
@@ -317,7 +312,7 @@ document.forms["mailContact"].elements["returnName"].focus();
 
 /**
  * Validate the POST data submitted in the form.
- * @return An error message if not validated.
+ * @return An error message if not validated, else 'ok'.
  */
 
 function validate_u3a_contact_form()
@@ -337,10 +332,11 @@ function validate_u3a_contact_form()
     if (!filter_var($_POST['returnEmail'], FILTER_VALIDATE_EMAIL)) {
         return "The email address you entered does not seem to be valid";
     }
+    return 'ok';
 }
 
 /** Send the message using wp_mail.
- * @return str Empty string on success or error message
+ * @return str 'ok' on success, else error message
  */
 function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [])
 {
@@ -368,7 +364,7 @@ END;
     add_action( 'phpmailer_init','u3a_add_plain_text_body');
     $result = wp_mail($to, $messageSubject, $html_start.$messageText.$html_end, $headers);
     remove_filter('wp_mail_content_type', 'u3a_set_wpmail_type');
-    return ($result == true) ? '' : 'wp_mail error';
+    return (true === $result) ? 'ok' : 'wp_mail error';
 }
 
 /**
