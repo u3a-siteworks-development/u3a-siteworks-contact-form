@@ -76,8 +76,20 @@ function u3a_contact_form_style()
 }
 
 /**
- *Returns a safe HTML link to the contact form page with a query parameter 'contact_id' set to the id of the contact instance in the db.
+ * Returns a safe HTML link to the contact form page,
+ * with a query parameter 'contact_id' set to the id of the contact instance in the db.
  *
+ * The shortcode requires either 1 or 2 parameters:
+ *    name - the name of the recipient (required)
+ *    email - the recipient's email address (required unless name is already a u3a Contact) 
+ * Example:  `[u3a_contact name="Freda Smith" email="freda@example.com"]`
+ * 
+ * If the contact is already included in the u3a Contacts database and an email address is specified there, you can omit the email address.
+ * Example:  `[u3a_contact name="Freda Smith"]`
+ * 
+ * You can also use this alternate form:   
+ *           `[u3a_contact] Freda Smith [/u3a_contact]`
+ * The spaces around the name are optional.
  */
 function u3a_contact_shortcode($atts, $content = null)
 {
@@ -142,6 +154,8 @@ function u3a_contact_shortcode($atts, $content = null)
  * it will send out the required email(s), and return a success message.
  * It also gives a logged-in user the option of sending a copy of the message to their specified return email address.
  * If processing a page with a valid contact_id but where the form not been submitted, or submitted with validation errors, it will return the HTML form, with a suitable error message where appropriate.
+ *
+ * @return str HTML for the form and/or messages.
  */
 function u3a_contact_form_shortcode($atts)
 {
@@ -326,7 +340,7 @@ function validate_u3a_contact_form()
 }
 
 /** Send the message using wp_mail.
- * @return Empty string on success or error message
+ * @return str Empty string on success or error message
  */
 function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [])
 {
@@ -360,14 +374,16 @@ END;
 /**
  * Helper function to set wp_mail content type
  */
-function u3a_set_wpmail_type() {
+function u3a_set_wpmail_type()
+{
     return 'text/html';
 }
 
 /**
  * Helper function to ad plain text alternative email content
  */
-function u3a_add_plain_text_body( $phpmailer ) {
+function u3a_add_plain_text_body($phpmailer)
+{
     $phpmailer->AltBody = wp_strip_all_tags( $phpmailer->Body );
 }
 
@@ -375,7 +391,8 @@ function u3a_add_plain_text_body( $phpmailer ) {
  * Helper function to set email FromName.
  * Uses global variable $u3a_contact_form_fromname
  */
-function u3a_contact_form_set_fromname( $phpmailer ) {
+function u3a_contact_form_set_fromname($phpmailer)
+{
     global $u3a_contact_form_fromname;
     $phpmailer->FromName = $u3a_contact_form_fromname;
 }
