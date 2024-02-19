@@ -276,37 +276,36 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
 <form id="mailContact" method="post">
   <input type="hidden" name="u3aMQDetect" value="test'">
   <div id="show-u3a-contact" class="u3aform">
-    '
 END;
     $copyHtml = '';
     if (is_user_logged_in()) {
         $copyHtml = '<div><label for="sendCopy">Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
     }
-    $html .= '
+    $html .= <<<END
     <div>
-    <label for="returnName">Your name: </label>
-    <input type="text" name="returnName" id="returnName" value="' . $returnName . '"/>
+        <label for="returnName">Your name: </label>
+        <input type="text" name="returnName" id="returnName" value="$returnName"/>
     </div>
     <div>
-    <label for="returnEmail">Your email address: </label>
-    <input type="email" name="returnEmail" id="returnEmail" value="' . $returnEmail . '"/>
+        <label for="returnEmail">Your email address: </label>
+        <input type="email" name="returnEmail" id="returnEmail" value="$returnEmail"/>
     </div>
     <div>
-    <label for="messageSubject">Message subject: </label>
-    <input type="text" name="messageSubject" id="messageSubject" value="' . $messageSubject . '"/>
+        <label for="messageSubject">Message subject: </label>
+        <input type="text" name="messageSubject" id="messageSubject" value="$messageSubject"/>
     </div>
     <div>
-    <label for="messageText">Your message: </label>
-    <textarea name="messageText" id="messageText" rows="10">' . $messageText . '</textarea>
+        <label for="messageText">Your message: </label>
+        <textarea name="messageText" id="messageText" rows="10">' . $messageText . '</textarea>
     </div>
-    ' . $copyHtml . '
+    $copyHtml 
     <p class="hasSubmit"><button class="wp-element-button" id="submitButton" name="sendEmail" type="submit">Send your email</button></p>
     </div>
 </form>
 <script type="text/javascript">
 document.forms["mailContact"].elements["returnName"].focus();
 </script>
-    ';
+END;
     return $html;
 }
 
@@ -344,12 +343,12 @@ function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [])
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>u3a SiteWorks message</title>
-<style>
-    body {font-family: sans-serif;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>u3a SiteWorks message</title>
+    <style>
+        body {font-family: sans-serif;}
+    </style>
 </head>
 <body>
 END;
