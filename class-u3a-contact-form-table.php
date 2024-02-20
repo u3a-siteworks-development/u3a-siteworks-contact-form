@@ -44,7 +44,6 @@ class U3aEmailContactsTable
     public static function find_or_add_contact_instance($addressee, $email, $source_url) {
         
         global $wpdb;
-        var_dump($addressee, $email, $source_url);
         $table_name = $wpdb->prefix . 'u3a_email_contacts';
         $results = $wpdb->get_results(
                      $wpdb->prepare(
@@ -52,7 +51,6 @@ class U3aEmailContactsTable
                        "AND email = %s AND source_url = %s",
                        [$addressee, $email, $source_url]
                    ));
-        var_dump($results);
         if (null != $results) {
             return $results[0]->id;
         }
