@@ -33,6 +33,8 @@ $u3acfUpdateChecker = PucFactory::buildUpdateChecker(
 define('U3A_CONTACT_PAGE_SLUG', 'u3a-contact-form');
 
 require_once 'class-u3a-contact-form-table.php';
+require_once "class-u3a-contact-form-log.php";
+U3aContactFormLog::initialise(__FILE__);
 
 register_activation_hook(__FILE__, 'u3a_contact_form_activation');
 function u3a_contact_form_activation()
@@ -51,6 +53,7 @@ register_uninstall_hook(__FILE__, 'u3a_contact_form_uninstall');
 function u3a_contact_form_uninstall()
 {
     U3aEmailContactsTable::delete_table();
+    U3aContactFormLog::delete_table();
     u3a_contact_form_delete_page();
 }
 
@@ -228,16 +231,19 @@ function u3a_contact_form_shortcode($atts)
 
     // Now send the email(s) and return a result message
 
-    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
+    $blocked = 'n'; // need to handle blocked 
+    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $blocked);
     if ('ok' == $status) {
         $result_message = '<p>Message sent to recipient.</p>';
+        $copy_to_user = 'n';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
             // Only send user a copy if they have used their own email address.
             if (wp_get_current_user()->user_email == $returnEmail) {
                 // send user a copy
-                $status = u3a_contact_mail($reply_to, $messageSubject,
+                $copy_to_user = 'y';
+                $copy_status = u3a_contact_mail($reply_to, $messageSubject,
                                            $copyPrefix . $messageHTML, $copy_message_headers);
-                if ('ok'== $status) {
+                if ('ok'== $copy_status) {
                     $result_message .= '<p>Message copy sent to you.</p>';
                 } else {
                     $result_message .=
@@ -249,10 +255,14 @@ function u3a_contact_form_shortcode($atts)
                     ' and no copy has been sent to you.</p>';
             }
         }
+    // log the message
+    U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
+                                    $blocked, $copy_to_user)
     } else {
         $result_message =
             '<p>Sorry there was a problem sending your message. Please try again later.</p>';
     }
+
     return $result_message;
 }
 
@@ -338,8 +348,11 @@ function validate_u3a_contact_form()
 /** Send the message using wp_mail.
  * @return str 'ok' on success, else error message
  */
-function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [])
+function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [], $blocked='n')
 {
+    if ('n' != $blocked) {
+        return 'ok';
+    }
     $html_start = <<< END
 <!DOCTYPE html>
 <html lang="en">
@@ -367,6 +380,8 @@ END;
     $result = wp_mail($to, $messageSubject, $html_start . $messageText . $html_end, $headers);
     return (true === $result) ? 'ok' : 'wp_mail error';
 }
+
+// Now functions related to the contact form page
 
 /**
  * Create the contact form page, if it does not exist.
