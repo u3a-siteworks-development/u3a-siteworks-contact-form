@@ -231,8 +231,7 @@ function u3a_contact_form_shortcode($atts)
 
     // Now send the email(s) and return a result message
 
-    $blocked = 'n'; // need to handle blocked 
-    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $blocked);
+    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
     if ('ok' == $status) {
         $result_message = '<p>Message sent to recipient.</p>';
         $copy_to_user = 'n';
@@ -257,7 +256,7 @@ function u3a_contact_form_shortcode($atts)
         }
     // log the message
     U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
-                                    $blocked, $copy_to_user)
+                                    'n', $copy_to_user);
     } else {
         $result_message =
             '<p>Sorry there was a problem sending your message. Please try again later.</p>';
@@ -283,16 +282,14 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     if ('' != $errorMessage) {
         $html .= '<p style="color: #f00; font-weight: bold;">' . $errorMessage . '</p>';
     }
-    $html .= <<< END
-<form id="mailContact" method="post">
-  <input type="hidden" name="u3aMQDetect" value="test'">
-  <div id="show-u3a-contact" class="u3aform">
-END;
     $copyHtml = '';
     if (is_user_logged_in()) {
         $copyHtml = '<div><label for="sendCopy">Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
     }
-    $html .= <<<END
+    $html .= <<< END
+<form id="mailContact" method="post">
+    <input type="hidden" name="u3aMQDetect" value="test'">
+    <div id="show-u3a-contact" class="u3aform">
     <div>
         <label for="returnName">Your name: </label>
         <input type="text" name="returnName" id="returnName" value="$returnName"/>

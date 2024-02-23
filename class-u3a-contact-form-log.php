@@ -1,14 +1,12 @@
 <?php
 class U3aContactFormLog
 {
-    global $wpdb;
-
     /**
      * The table_name
      *
      * @var string 
      */
-    public static $table_name = $wpdb->prefix . 'u3a_cf_log';
+    public static $table_name;
 
     /**
      * Set up the actions and filters used by this class.
@@ -17,6 +15,9 @@ class U3aContactFormLog
      */
     public static function initialise($plugin_file)
     {
+        // set the table name
+        global $wpdb;
+        self::$table_name = $wpdb->prefix . 'u3a_cf_log';
         // Add the Contact Form Log to the dashboard
         add_action('admin_menu', array(self::class, 'log_page'));
         // Hook: function to process the form in render_log()
@@ -24,7 +25,7 @@ class U3aContactFormLog
         
         // create the database table if it has not yet been created.
         $table_exists = get_option('u3a_cf_log_table', false);
-        if (!table_exists) {
+        if (!$table_exists) {
             self::create_table();
             update_option('u3a_cf_log_table', '1');
         }
@@ -116,13 +117,13 @@ class U3aContactFormLog
     {
         global $wpdb;
         $time_limit = time() - $days*86400;
-        $query = "SELECT COUNT(*) FROM %i WHERE sent_time >= %d ";
+        $query = "SELECT COUNT(*) as total FROM %i WHERE time_sent >= %d ";
         if ('blocked' == $which) {
             $query .= " AND blocked != 'n' ";
         }
         $row = $wpdb->get_row($wpdb->prepare($query, self::$table_name, $time_limit));
-        var_dump $row;
-        return 999; // not really
+        $count = (null !== $row) ? $row->total : 0;
+        return $count;
     }
 
     /**
@@ -136,23 +137,22 @@ class U3aContactFormLog
      * @param  int $offset  number of initial records to ignore  
      * @return array        a numbered array of matching records
      */
-    public static function get_list($days, $which='all', $limit=50, $offset=0)
+    public static function get_list($days, $which='all', $limit=25, $offset=0)
     {
         global $wpdb;
-        $params = [$limit, $offset];
         $time_limit = time() - $days*86400;
-        $params[] = $time_limit;
-        $query = "SELECT * FROM %i ORDER BY time_sent DESC LIMIT %s OFFSET %s WHERE sent_time >= %d ";
+        $params = [self::$table_name, $time_limit, $limit, $offset];
+        $querywhere = "SELECT * FROM %i WHERE time_sent >= %d ";
+        $orderby = " ORDER BY time_sent DESC LIMIT %d OFFSET %d";
         if ('all' != $which) {
             if ('blocked' == $which) {
-                $query .= " AND blocked != 'n' ";
+                $querywhere .= " AND blocked != 'n' ";
             } else {
-                $query .= " AND to_email = %s ";
-                $params[] = $which; // append an extra param for prepare function
+                $querywhere .= " AND to_email = %s";
+                array_splice($params, 2, 0,$which); // add an extra param after $time_limit
             }
         }
-        $results = $wpdb->get_results($wpdb->prepare($query, self::$table_name, $params));
-        var_dump $results[0];
+        $results = $wpdb->get_results($wpdb->prepare($querywhere . $orderby, $params));
         return $results;
     }
 
@@ -167,8 +167,7 @@ class U3aContactFormLog
     }
 
     /**
-     * Add page for showing log.
-     *
+     * Add admin page for showing log.
      */
     public static function log_page()
     {
@@ -184,80 +183,115 @@ class U3aContactFormLog
     }
 
     /**
-     * Output the log summary and details.
+     * Outputs either the log summary and form to enter request for details, or list of details.
      *
+     * Arguments passed as query parameters
+     *      mode: 'list' or assumed to be 'summary' in list mode further parameters
+     *      filter: 'all', 'blocked' or an addressee email (required)
+     *      per-page: number of records to display per page
+     *      page_num: which page of records to display 
      */
     public static function render_log()
     {
         print '<h2>Contact form log</h2>';
-
         $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : 'summary';
         if ('list' == $mode) {
-            $params = get_transient('u3a_cf_log');
-            if (false === $params) {
-                //oh dear, better try again somehow.
-            } else {
-                list($filter, $per_page) = explode(",", $params);
-                print display_list($filter, $per_page);
+            $filter = isset($_GET['filter']) ? sanitize_text_field(urldecode($_GET['filter'])) : '';
+            // see select options in form in 'summary' mode for valid values
+            $filter_plain_values = ['all', 'blocked'];
+            if (!in_array($filter, $filter_plain_values) && !filter_var($filter, FILTER_VALIDATE_EMAIL)) {
+                print 'In list mode. <br>Missing or invalid filter parameter';
+                return;
             }
-            exit(); //is this right or just return?
+            $per_page = isset($_GET['per_page']) ? (int)($_GET['per_page']) : 25;
+            // see select options in form in 'summary' mode for valid values
+            $per_page_values = [25, 50, 100];
+            if (!in_array($per_page, $per_page_values)) {
+                print 'In list mode. <br>Invalid per_page parameter';
+                return;
+            }
+            // (int) gives zero if not numeric input, so $page_num will default to 0 for non numeric input value.
+            $page_num = isset($_GET['page_num']) ? (int)($_GET['page_num']) : 0;
+            $page_num = ($page_num > 0) ? $page_num : 1; // change default to 1
+            print self::display_list($filter, $per_page, $page_num);
+            return;
         }
 
         // else treat as 'summary' mode
 
         // get summary data
         $days = 30;
-        $num_msgs = get_count($days, 'all');
-        $num_blocked = get_count($days, 'blocked');
+        $num_msgs = self::get_count($days, 'all');
+        $num_blocked = self::get_count($days, 'blocked');
 
         // print summary data
         print <<<END
         <p> There were $num_msgs messages sent via u3a-contact-form in the last $days days.
         <br>
-        This includes $num_blocked messages which were blocked as spam.</p>
+        This includes $num_blocked messages blocked as spam.</p>
         END;
 
-        $nonce_code =  wp_nonce_field('u3a_cf_log', 'u3a_nonce', true, false);
-        $submit_button = get_submit_button('Save Settings');
+        $nonce_code =  wp_nonce_field('u3a_cf_log', 'u3a_cf_nonce', true, false);
+        $submit_button = get_submit_button('Show selected messages','primary large','submit', true, array( 'tabindex' => '99' ));
         print <<<END
         <form method="POST" action="admin-post.php">
         <input type="hidden" name="action" value="u3a_cf_log">
         $nonce_code
-        $u3aMQDetect
+        <p>You can filter which message you want to see.</p>
+        <table><tr><td>
         <label for="filter">Filter messages: </label>
-        <select name="filter" id="filter" required>
-          <option value="all">All</option>
-          <option value="blocked">Blocked only/option>
-          <option value="email">Specific recipient</option>
-        </select>
-        <div id="email-choice">
-            <label for="to_email">Recipient email address: </label>
-            <input type="email" name="to_email" id="to_email"/>
-        </div>
+            <select name="filter" id="filter" onchange="u3a_filter_change()" required>
+              <option value="all">All</option>
+              <option value="blocked">Blocked only</option>
+              <option value="email">Specific recipient</option>
+            </select>
+        </td>
+        <td>
         <label for="per_page">Messages per page: </label>
-        <select name="per_page" id="per_page" required>
-          <option value=25 selected>25</option>
-          <option value=50>50/option>
-          <option value=100>100</option>
-        </select>
+            <select name="per_page" id="per_page" required>
+              <option value=25 selected>25</option>
+              <option value=50>50</option>
+              <option value=100>100</option>
+            </select>
+        </td></tr>
+        <tr id="email_choice" style="display:none;">
+        <td>
+            Which recipient email address do you want to filter on?<br>
+            <label for="to_email">Recipient email address: </label>
+            <input type="email" name="to_email" id="to_email" placeholder="Enter the addressee email"/>
+            </td>
+        </tr>
+        </table>
+        </table>
         $submit_button
         </form>
-XXX        TBD need some javascript here
+        <script>
+            function u3a_filter_change() {
+                var email_choice = document.getElementById("email_choice");
+                var to_email = document.getElementById("to_email");
+                if ("email" == document.getElementById("filter").value) {
+                    email_choice.style.display = "block";
+                    to_email.required = true;
+                } else {
+                    email_choice.style.display = "none";
+                    to_email.required = false;
+
+                }
+            }
+        </script>
         END;
-        exit(); //is this right or just return?
+        return;
     }
 
     /**
-     * Saves the display params in a transient.
+     * Saves the display params as query string and then redirects.
      *
+     * Called when form with action 'u3a_cf_log' is submitted.
      */
     public static function save_display_params()
     {
         // check nonce
-        if (check_admin_referer('u3a_cf_log', 'u3a_nonce') == false) wp_die('Invalid form submission');
-        // check for WP magic quotes  DONT NEED THIS HERE
-        $u3aMQDetect = $_POST['u3aMQDetect'];
-        $needStripSlashes = (strlen($u3aMQDetect) > 5) ? true : false; // backslash added to apostrophe in test string?
+        if (check_admin_referer('u3a_cf_log', 'u3a_cf_nonce') == false) wp_die('Invalid form submission');
 
         $filter = empty($_POST['filter']) ? 'all' : sanitize_text_field($_POST['filter']);;
         if ('email' == $filter) {
@@ -265,23 +299,77 @@ XXX        TBD need some javascript here
             $filter = $to_email;
         }
         $per_page = empty($_POST['per_page']) ? '25' : sanitize_text_field($_POST['per_page']);;
-        set_transient('u3a_cf_log', $filter . "," . $per_page, 10*60);
 
         // redirect back to log page (list mode)
-        wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log&mode=list'));
+        $filter = urlencode($filter);
+        $params = "&mode=list&per_page=$per_page&filter=$filter";
+        wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log' . $params));
         exit();
     }
 
     /**
-     * Display a log list.
+     * Display a list of selected records from the message log.
      *
+     * @param str   $filter: 'all', 'blocked' or an addressee email
+     * @param int   $per-page: number of records to display per page
+     * @param int   $page_num: which page of records to display
+     *
+     * @return str  $HTML 
      */
-    public static function display_list($filter, $per_page) {
-        $HTML = <<<END
-        <p> list TBD here</p>
-        END;
+    public static function display_list($filter, $per_page=25, $page_num=1) {
+        $HTML = "<p> Showing results with filter = $filter.<br>Page: $page_num</p>";
+        $days = 100;  // assumes that database record more than three months old have been deleted
+        $offset = $per_page * ($page_num - 1);
+        $email_list = self::get_list($days, $filter, $per_page, $offset);
+        // format time_sent attributes like '2024-02-14 18:30:23'
+        foreach ($email_list as $row) {
+            $row->time_sent = date('Y-m-d H:i:s', $row->time_sent);
+        }
+        $count = (!empty($email_list)) ? count($email_list) : 0;
+        $start = $offset + 1;
+        $end = $offset + $count;
+        if ($count) {
+            $HTML .= "<p> Records $start to $end</p>" . u3a_cf_array_of_objects_to_HTML_table($email_list);
+        } else {
+            $HTML .= "No matching records";
+        }
+        if ($count == $per_page) { // there may be more records
+            $next_page = $page_num + 1;
+            $params = "&mode=list&per_page=$per_page&filter=$filter&page_num=$next_page";
+            $url = admin_url('admin.php?page=u3a-contact-form-log' . $params);
+            $HTML .= "<br><p><a href='$url'>Next Page</a>";
+        } else {
+            $url = admin_url('admin.php?page=u3a-contact-form-log&mode=summary');
+            $HTML .= "<br><p><a href='$url'>Back to summary page</a>";
+        }
         return $HTML;
-
     }
-
 }
+
+// Finally, outside the clsss, (This is bad practice I will move it later) a little local function, which is reusable
+// @return  the required HTML <table> or '' if no data
+function u3a_cf_array_of_objects_to_HTML_table($data) {
+    if (empty($data)) {
+        return '';
+    }
+    $HTML = <<<END
+    <table border="1">
+      <thead>
+        <tr>
+    END;
+    $HTML .= '<th>' . implode('</th><th>', array_map('htmlentities', array_keys(get_object_vars($data[0])))) . '</th>';
+    $HTML .= <<<END
+        </tr>
+      </thead>
+      <tbody>
+    END;
+    foreach ($data as $row) {
+        $HTML .= '<tr><td>' . implode('</td><td>', array_map('htmlentities', get_object_vars($row))) . '</td></tr>';
+    }
+    $HTML .= <<<END
+      </tbody>
+    </table>
+    END;
+    return $HTML;
+}
+
