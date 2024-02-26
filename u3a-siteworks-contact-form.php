@@ -197,6 +197,11 @@ function u3a_contact_form_shortcode($atts)
 
     // Response validated, set up the email and optional copy to logged in user
 
+    // set single char value of $u3amember
+    $u3amember = empty($_POST['u3amember']) ? '---' : sanitize_text_field($_POST['u3amember']);
+    $u3amember_codes = ['---' => 'n', 'yes' => 'A', 'no' => 'B'];
+    $u3amember = $u3amember_codes[$u3amember] ?? 'C'; // 'C' allows for abnormal $POST value
+
     // TBD can we deal with adding suffix 'u3a' somewhere else?
     $orgname = html_entity_decode(get_bloginfo('name'));
     // add suffix u3a unless already present
@@ -231,7 +236,7 @@ function u3a_contact_form_shortcode($atts)
 
     // Now send the email(s) and return a result message
 
-    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
+    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $u3amember);
     if ('ok' == $status) {
         $result_message = '<p>Message sent to recipient.</p>';
         $copy_to_user = 'n';
@@ -256,7 +261,7 @@ function u3a_contact_form_shortcode($atts)
         }
     // log the message
     U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
-                                    'n', $copy_to_user);
+                                    $u3amember, $copy_to_user);
     } else {
         $result_message =
             '<p>Sorry there was a problem sending your message. Please try again later.</p>';
@@ -297,6 +302,13 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     <div>
         <label for="returnEmail">Your email address: </label>
         <input type="email" name="returnEmail" id="returnEmail" value="$returnEmail"/>
+    </div>
+    <div id='u3amember'>
+        <label>U3A member?</label>
+        <label for='memyes'>Yes</label>
+        <input type='radio' id='memyes' name='u3amember' value='yes'> &nbsp;
+        <label for='memno'>No</label>
+        <input type='radio' id='memno' name='u3amember' value='no'> &nbsp;
     </div>
     <div>
         <label for="messageSubject">Message subject: </label>
