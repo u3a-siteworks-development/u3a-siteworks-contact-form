@@ -48,6 +48,8 @@ function u3a_contact_form_deactivation()
     /* de-register the shortcodes */
     remove_shortcode('u3a_contact_form');
     remove_shortcode('u3a_contact');
+    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
+    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
 }
 register_uninstall_hook(__FILE__, 'u3a_contact_form_uninstall');
 function u3a_contact_form_uninstall()
@@ -55,7 +57,39 @@ function u3a_contact_form_uninstall()
     U3aEmailContactsTable::delete_table();
     U3aContactFormLog::delete_table();
     u3a_contact_form_delete_page();
+    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
+    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
 }
+
+/**
+ * The cron job - deletes old database records.
+ */
+function u3a_cf_cron_exec()
+{
+    U3aEmailContactsTable::clear_old_contact_instances(2);
+    U3aContactFormLog::clear_old_messages(30);
+}
+add_action('u3a_cf_cron_hook', 'u3a_cf_cron_exec');
+
+/**
+ * Schedule the cron job for 4am tomorrow, if the job is not currently scheduled.
+ * The job will be repeated daily at 4am.
+ */
+function u3a_cf_schedule_cron()
+{
+    $timestamp = wp_next_scheduled('u3a_cf_cron_hook');
+    if ($timestamp) {  // there is a scheduled event
+         return;
+    }
+    // schedule event for 4am tomorrow
+    $date = new DateTime();
+    $date->setTimestamp(time());
+    // Reset hours, minutes and seconds to zero.
+    $date->setTime(0, 0, 0);
+    $tomorrow_4am = $date->getTimestamp() + 86400 + (4*3600);
+    wp_schedule_event($tomorrow_4am, 'daily', 'u3a_cf_cron_hook' );
+}
+add_action('init','u3a_cf_schedule_cron');
 
 
 /* Register the shortcodes */
