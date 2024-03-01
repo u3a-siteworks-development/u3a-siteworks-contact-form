@@ -465,3 +465,38 @@ function u3a_contact_form_delete_page()
         wp_delete_post($page[0]->ID, true);
     }
 }
+
+// Finally a little reusable function.
+
+/**
+ * Makes an html table from an array of objects.
+ *
+ * @param array $data each element must be an object with printable values.
+ * @return  the required HTML <table> or '' if no data
+ */
+
+function u3a_cf_array_of_objects_to_HTML_table($data) {
+    if (empty($data)) {
+        return '';
+    }
+    $HTML = <<<END
+    <table border="1">
+      <thead>
+        <tr>
+    END;
+    $HTML .= '<th>' . implode('</th><th>', array_map('htmlentities', array_keys(get_object_vars($data[0])))) . '</th>';
+    $HTML .= <<<END
+        </tr>
+      </thead>
+      <tbody>
+    END;
+    foreach ($data as $row) {
+        $HTML .= '<tr><td>' . implode('</td><td>', array_map('htmlentities', get_object_vars($row))) . '</td></tr>';
+    }
+    $HTML .= <<<END
+      </tbody>
+    </table>
+    END;
+    return $HTML;
+}
+
