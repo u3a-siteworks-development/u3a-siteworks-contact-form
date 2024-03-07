@@ -32,6 +32,10 @@ div.u3aform {
     text-align: center;
 }
 
+.u3aform :nth-child(3) {
+    display: none;
+}
+
 @media only screen and (max-width:768px) {
     .u3aform div {
         display: block;

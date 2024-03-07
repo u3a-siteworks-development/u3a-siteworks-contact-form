@@ -346,30 +346,3 @@ class U3aContactFormLog
     }
 }
 
-// Finally, outside the clsss, (This is bad practice I will move it later) a little local function, which is reusable
-// @return  the required HTML <table> or '' if no data
-function u3a_cf_array_of_objects_to_HTML_table($data) {
-    if (empty($data)) {
-        return '';
-    }
-    $HTML = <<<END
-    <table border="1">
-      <thead>
-        <tr>
-    END;
-    $HTML .= '<th>' . implode('</th><th>', array_map('htmlentities', array_keys(get_object_vars($data[0])))) . '</th>';
-    $HTML .= <<<END
-        </tr>
-      </thead>
-      <tbody>
-    END;
-    foreach ($data as $row) {
-        $HTML .= '<tr><td>' . implode('</td><td>', array_map('htmlentities', get_object_vars($row))) . '</td></tr>';
-    }
-    $HTML .= <<<END
-      </tbody>
-    </table>
-    END;
-    return $HTML;
-}
-

@@ -48,6 +48,8 @@ function u3a_contact_form_deactivation()
     /* de-register the shortcodes */
     remove_shortcode('u3a_contact_form');
     remove_shortcode('u3a_contact');
+    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
+    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
 }
 register_uninstall_hook(__FILE__, 'u3a_contact_form_uninstall');
 function u3a_contact_form_uninstall()
@@ -55,7 +57,39 @@ function u3a_contact_form_uninstall()
     U3aEmailContactsTable::delete_table();
     U3aContactFormLog::delete_table();
     u3a_contact_form_delete_page();
+    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
+    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
 }
+
+/**
+ * The cron job - deletes old database records.
+ */
+function u3a_cf_cron_exec()
+{
+    U3aEmailContactsTable::clear_old_contact_instances(2);
+    U3aContactFormLog::clear_old_messages(30);
+}
+add_action('u3a_cf_cron_hook', 'u3a_cf_cron_exec');
+
+/**
+ * Schedule the cron job for 4am tomorrow, if the job is not currently scheduled.
+ * The job will be repeated daily at 4am.
+ */
+function u3a_cf_schedule_cron()
+{
+    $timestamp = wp_next_scheduled('u3a_cf_cron_hook');
+    if ($timestamp) {  // there is a scheduled event
+         return;
+    }
+    // schedule event for 4am tomorrow
+    $date = new DateTime();
+    $date->setTimestamp(time());
+    // Reset hours, minutes and seconds to zero.
+    $date->setTime(0, 0, 0);
+    $tomorrow_4am = $date->getTimestamp() + 86400 + (4*3600);
+    wp_schedule_event($tomorrow_4am, 'daily', 'u3a_cf_cron_hook' );
+}
+add_action('init','u3a_cf_schedule_cron');
 
 
 /* Register the shortcodes */
@@ -197,6 +231,11 @@ function u3a_contact_form_shortcode($atts)
 
     // Response validated, set up the email and optional copy to logged in user
 
+    // set single char value of $u3amember
+    $u3amember = empty($_POST['u3amember']) ? '---' : sanitize_text_field($_POST['u3amember']);
+    $u3amember_codes = ['---' => 'n', 'yes' => 'A', 'no' => 'B'];
+    $u3amember = $u3amember_codes[$u3amember] ?? 'C'; // 'C' allows for abnormal $POST value
+
     // TBD can we deal with adding suffix 'u3a' somewhere else?
     $orgname = html_entity_decode(get_bloginfo('name'));
     // add suffix u3a unless already present
@@ -231,7 +270,7 @@ function u3a_contact_form_shortcode($atts)
 
     // Now send the email(s) and return a result message
 
-    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers);
+    $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $u3amember);
     if ('ok' == $status) {
         $result_message = '<p>Message sent to recipient.</p>';
         $copy_to_user = 'n';
@@ -256,7 +295,7 @@ function u3a_contact_form_shortcode($atts)
         }
     // log the message
     U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
-                                    'n', $copy_to_user);
+                                    $u3amember, $copy_to_user);
     } else {
         $result_message =
             '<p>Sorry there was a problem sending your message. Please try again later.</p>';
@@ -297,6 +336,13 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     <div>
         <label for="returnEmail">Your email address: </label>
         <input type="email" name="returnEmail" id="returnEmail" value="$returnEmail"/>
+    </div>
+    <div id='u3amember'>
+        <label>U3A member?</label>
+        <label for='memyes'>Yes</label>
+        <input type='radio' id='memyes' name='u3amember' value='yes'> &nbsp;
+        <label for='memno'>No</label>
+        <input type='radio' id='memno' name='u3amember' value='no'> &nbsp;
     </div>
     <div>
         <label for="messageSubject">Message subject: </label>
@@ -419,3 +465,38 @@ function u3a_contact_form_delete_page()
         wp_delete_post($page[0]->ID, true);
     }
 }
+
+// Finally a little reusable function.
+
+/**
+ * Makes an html table from an array of objects.
+ *
+ * @param array $data each element must be an object with printable values.
+ * @return  the required HTML <table> or '' if no data
+ */
+
+function u3a_cf_array_of_objects_to_HTML_table($data) {
+    if (empty($data)) {
+        return '';
+    }
+    $HTML = <<<END
+    <table border="1">
+      <thead>
+        <tr>
+    END;
+    $HTML .= '<th>' . implode('</th><th>', array_map('htmlentities', array_keys(get_object_vars($data[0])))) . '</th>';
+    $HTML .= <<<END
+        </tr>
+      </thead>
+      <tbody>
+    END;
+    foreach ($data as $row) {
+        $HTML .= '<tr><td>' . implode('</td><td>', array_map('htmlentities', get_object_vars($row))) . '</td></tr>';
+    }
+    $HTML .= <<<END
+      </tbody>
+    </table>
+    END;
+    return $HTML;
+}
+
