@@ -287,7 +287,7 @@ function u3a_contact_form_shortcode($atts)
 
     $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $u3amember);
     if ('ok' == $status) {
-        $result_message = '<p>Message sent to recipient.</p>';
+        $result_message = '<p>Message to recipient was sent successfully.</p>';
         $copy_to_user = 'n';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
             // Only send user a copy if they have used their own email address.
