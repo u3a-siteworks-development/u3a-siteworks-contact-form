@@ -193,6 +193,7 @@ class U3aContactFormLog
      */
     public static function render_log()
     {
+        print '<div class="wrap">';
         print '<h2>Contact form log</h2>';
         $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : 'summary';
         if ('list' == $mode) {
@@ -201,6 +202,7 @@ class U3aContactFormLog
             $filter_plain_values = ['all', 'blocked'];
             if (!in_array($filter, $filter_plain_values) && !filter_var($filter, FILTER_VALIDATE_EMAIL)) {
                 print 'In list mode. <br>Missing or invalid filter parameter';
+                print '</div>'; //end class 'wrap'
                 return;
             }
             $per_page = isset($_GET['per_page']) ? (int)($_GET['per_page']) : 25;
@@ -208,12 +210,14 @@ class U3aContactFormLog
             $per_page_values = [25, 50, 100];
             if (!in_array($per_page, $per_page_values)) {
                 print 'In list mode. <br>Invalid per_page parameter';
+                print '</div>'; //end class 'wrap'
                 return;
             }
             // (int) gives zero if not numeric input, so $page_num will default to 0 for non numeric input value.
             $page_num = isset($_GET['page_num']) ? (int)($_GET['page_num']) : 0;
             $page_num = ($page_num > 0) ? $page_num : 1; // change default to 1
             print self::display_list($filter, $per_page, $page_num);
+            print '</div>'; //end class 'wrap'
             return;
         }
 
@@ -232,7 +236,7 @@ class U3aContactFormLog
         END;
 
         $nonce_code =  wp_nonce_field('u3a_cf_log', 'u3a_cf_nonce', true, false);
-        $submit_button = get_submit_button('Show selected messages','primary large','submit', true, array( 'tabindex' => '99' ));
+        $submit_button = get_submit_button('Show selected messages','primary large','submit', true);
         print <<<END
         <form method="POST" action="admin-post.php">
         <input type="hidden" name="action" value="u3a_cf_log">
@@ -249,7 +253,7 @@ class U3aContactFormLog
         <td>
         <label for="per_page">Messages per page: </label>
             <select name="per_page" id="per_page" required>
-              <option value=25 selected>25</option>
+              <option value=25 selected="selected">25</option>
               <option value=50>50</option>
               <option value=100>100</option>
             </select>
@@ -329,7 +333,7 @@ class U3aContactFormLog
         $start = $offset + 1;
         $end = $offset + $count;
         if ($count) {
-            $HTML .= "<p> Records $start to $end</p>" . u3a_cf_array_of_objects_to_HTML_table($email_list);
+            $HTML .= "<p> Records $start to $end</p>" . self::array_of_objects_to_HTML_table($email_list);
         } else {
             $HTML .= "No matching records";
         }
@@ -344,5 +348,44 @@ class U3aContactFormLog
         }
         return $HTML;
     }
+
+/**
+ * Makes an html table from an array of objects.
+ *
+ * @param array $data each element must be an object with printable values.
+ * @return  the required HTML <table> or '' if no data
+ */
+
+public static function array_of_objects_to_HTML_table($data) {
+    if (empty($data)) {
+        return '';
+    }
+    $HTML = '<table class= "u3acf_table">' . "\n";
+    // head
+    $HTML .= '  <thead>' . "\n";
+    $HTML .= '    <tr>' . "\n";;
+    $headings = array_keys(get_object_vars($data[0]));
+    $headings = str_replace('_', ' ', $headings);
+    foreach ($headings as $heading) {
+        $HTML .= "<th>$heading</th>";
+    }
+    $HTML .= '    </tr>' . "\n";
+    $HTML .= '  </thead>' . "\n";
+    // body
+    $HTML .= '  <tbody>' . "\n";
+    foreach ($data as $row) {
+        $HTML .= '    <tr>' . "\n";
+        $values = get_object_vars($row);
+        $values = str_replace('@', '@<br>', $values);
+        foreach ($values as $value) {
+            $HTML .= "<td>$value</td>";
+        }
+        $HTML .= '    </tr>' . "\n";
+   }
+    $HTML .= '  </tbody>' . "\n";
+    $HTML .= '</table>' . "\n";
+    return $HTML;
+}
+
 }
 

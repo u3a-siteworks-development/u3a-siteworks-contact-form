@@ -1,0 +1,11 @@
+/* Styles for cf log table */
+
+.u3acf_table {
+    border:1px solid;
+    border-collapse:collapse;
+}
+
+.u3acf_table th,
+.u3acf_table td{
+    border:1px solid;
+}
