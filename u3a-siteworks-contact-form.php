@@ -111,6 +111,21 @@ function u3a_contact_form_style()
                      false
                      );
 }
+// Load CSS for the contact form admin page log table
+add_action('admin_enqueue_scripts', 'u3a_cf_log_table_style');
+
+function u3a_cf_log_table_style($hook)
+{
+    if (!(str_contains($hook,'u3a-contact-form-log'))) {
+        return;
+    }
+    wp_enqueue_style('u3a-cf-log-table',
+                     plugin_dir_url(__FILE__) . 'u3a-cf-log-table.css',
+                     array(),
+                     U3A_SITEWORKS_CONTACT_FORM_VERSION,
+                     false
+                     );
+}
 
 /**
  * Returns a safe HTML link to the contact form page,
@@ -272,7 +287,7 @@ function u3a_contact_form_shortcode($atts)
 
     $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $u3amember);
     if ('ok' == $status) {
-        $result_message = '<p>Message sent to recipient.</p>';
+        $result_message = '<p>Message to recipient was sent successfully.</p>';
         $copy_to_user = 'n';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
             // Only send user a copy if they have used their own email address.
@@ -464,39 +479,5 @@ function u3a_contact_form_delete_page()
     if ($page) {
         wp_delete_post($page[0]->ID, true);
     }
-}
-
-// Finally a little reusable function.
-
-/**
- * Makes an html table from an array of objects.
- *
- * @param array $data each element must be an object with printable values.
- * @return  the required HTML <table> or '' if no data
- */
-
-function u3a_cf_array_of_objects_to_HTML_table($data) {
-    if (empty($data)) {
-        return '';
-    }
-    $HTML = <<<END
-    <table border="1">
-      <thead>
-        <tr>
-    END;
-    $HTML .= '<th>' . implode('</th><th>', array_map('htmlentities', array_keys(get_object_vars($data[0])))) . '</th>';
-    $HTML .= <<<END
-        </tr>
-      </thead>
-      <tbody>
-    END;
-    foreach ($data as $row) {
-        $HTML .= '<tr><td>' . implode('</td><td>', array_map('htmlentities', get_object_vars($row))) . '</td></tr>';
-    }
-    $HTML .= <<<END
-      </tbody>
-    </table>
-    END;
-    return $HTML;
 }
 
