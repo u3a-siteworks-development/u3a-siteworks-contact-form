@@ -20,8 +20,23 @@ class U3aContactFormLog
         self::$table_name = $wpdb->prefix . 'u3a_cf_log';
         // Add the Contact Form Log to the dashboard
         add_action('admin_menu', array(self::class, 'log_page'));
-        // Hook: function to process the form in render_log()
-        add_action('admin_post_u3a_cf_log', array(self::class, 'save_display_params'));
+        // Hooks: functions to process the forms in render_log()
+        add_action('admin_post_u3a_cf_log_list', array(self::class, 'save_display_params'));
+        add_action('admin_post_u3a_cf_log_enable', function () {
+            // check nonce
+            if (check_admin_referer('u3a_cf_log_enable', 'enable_nonce') == false) wp_die('Invalid form submission');
+            update_option('u3a_cf_log_enabled', '1');
+            wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log&mode=enabled-success'));
+            exit();
+            });
+        add_action('admin_post_u3a_cf_log_disable', function () {
+            // check nonce
+            if (check_admin_referer('u3a_cf_log_disable', 'disable_nonce') == false) wp_die('Invalid form submission');
+            update_option('u3a_cf_log_enabled', 0);
+            U3aContactFormLog::clear_old_messages(-1);
+            wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log&mode=disabled-success'));
+            exit();
+            });
         
         // create the database table if it has not yet been created.
         $table_exists = get_option('u3a_cf_log_table', false);
@@ -163,7 +178,7 @@ class U3aContactFormLog
     {
         global $wpdb;
         $stale = time() - $days*86400;
-        return $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE sent_time < %d", self::$table_name, $stale));
+        return $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE time_sent< %d", self::$table_name, $stale));
     }
 
     /**
@@ -193,9 +208,53 @@ class U3aContactFormLog
      */
     public static function render_log()
     {
-        print '<div class="wrap">';
-        print '<h2>Contact form log</h2>';
-        $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : 'summary';
+        $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : '';
+
+        print <<<END
+        <div class="wrap">
+            <h2>Contact form log</h2>
+        END;
+        $log_enabled = get_option('u3a_cf_log_enabled', false);
+        if (!$log_enabled) {
+            if ('disabled-success' == $mode) {
+                $info_msg = 'The contact form log has been emptied and disabled.';
+                print "<div class='notice notice-error is-dismissible inline'><p>$info_msg</p></div>";
+            }
+            $nonce_code =  wp_nonce_field('u3a_cf_log_enable', 'enable_nonce', true, false);
+            $submit_button = get_submit_button('Enable log','primary large','submit', true);
+            $advice = nl2br(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'privacy.txt'));
+            print <<<END
+            <h3>The log is currently disabled.</h3>
+            <p>Before enabling it, note the following.<br><br>
+            $advice</p>
+            <form method="POST" action="admin-post.php">
+                <input type="hidden" name="action" value="u3a_cf_log_enable">
+                $nonce_code
+                $submit_button
+            </form>
+        </div>
+        END;
+        return;
+        }
+
+        // Log is currently enabled
+        if ('enabled-success' == $mode) {
+            $info_msg = 'The contact form log has been enabled.';
+            print "<div class='notice notice-error is-dismissible inline'><p>$info_msg</p></div>";
+        }
+
+        $nonce_code =  wp_nonce_field('u3a_cf_log_disable', 'disable_nonce', true, false);
+        $submit_button = get_submit_button('Delete and disable','primary large','submit', true);
+        print <<<END
+            <h3>The log is currently enabled.</h3>
+            <p>To delete the contents of the log, and disable logging, press 'Delete and disable'.</p>
+            <form method="POST" action="admin-post.php">
+                <input type="hidden" name="action" value="u3a_cf_log_disable">
+                $nonce_code
+                $submit_button
+            </form>
+        END;
+
         if ('list' == $mode) {
             $filter = isset($_GET['filter']) ? sanitize_text_field(urldecode($_GET['filter'])) : '';
             // see select options in form in 'summary' mode for valid values
@@ -217,6 +276,8 @@ class U3aContactFormLog
             $page_num = isset($_GET['page_num']) ? (int)($_GET['page_num']) : 0;
             $page_num = ($page_num > 0) ? $page_num : 1; // change default to 1
             print self::display_list($filter, $per_page, $page_num);
+            $url = admin_url('admin.php?page=u3a-contact-form-log&mode=summary');
+            print "<p><a href='$url'>Back to summary page</a></p>";
             print '</div>'; //end class 'wrap'
             return;
         }
@@ -224,7 +285,7 @@ class U3aContactFormLog
         // else treat as 'summary' mode
 
         // get summary data
-        $days = 30;
+        $days = 90;
         $num_msgs = self::get_count($days, 'all');
         $num_blocked = self::get_count($days, 'blocked');
 
@@ -235,11 +296,11 @@ class U3aContactFormLog
         This includes $num_blocked messages blocked as spam.</p>
         END;
 
-        $nonce_code =  wp_nonce_field('u3a_cf_log', 'u3a_cf_nonce', true, false);
+        $nonce_code =  wp_nonce_field('u3a_cf_log_list', 'list_nonce', true, false);
         $submit_button = get_submit_button('Show selected messages','primary large','submit', true);
         print <<<END
         <form method="POST" action="admin-post.php">
-        <input type="hidden" name="action" value="u3a_cf_log">
+        <input type="hidden" name="action" value="u3a_cf_log_list">
         $nonce_code
         <p>You can filter which message you want to see.</p>
         <table><tr><td>
@@ -290,12 +351,12 @@ class U3aContactFormLog
     /**
      * Saves the display params as query string and then redirects.
      *
-     * Called when form with action 'u3a_cf_log' is submitted.
+     * Called when form with action 'u3a_cf_log_list' is submitted.
      */
     public static function save_display_params()
     {
         // check nonce
-        if (check_admin_referer('u3a_cf_log', 'u3a_cf_nonce') == false) wp_die('Invalid form submission');
+        if (check_admin_referer('u3a_cf_log_list', 'list_nonce') == false) wp_die('Invalid form submission');
 
         $filter = empty($_POST['filter']) ? 'all' : sanitize_text_field($_POST['filter']);;
         if ('email' == $filter) {
@@ -333,7 +394,8 @@ class U3aContactFormLog
         $start = $offset + 1;
         $end = $offset + $count;
         if ($count) {
-            $HTML .= "<p> Records $start to $end</p>" . self::array_of_objects_to_HTML_table($email_list);
+            $HTML .= "<p> Records $start to $end</p>";
+            $HTML .= self::array_of_objects_to_HTML_table($email_list);
         } else {
             $HTML .= "No matching records";
         }
@@ -341,10 +403,7 @@ class U3aContactFormLog
             $next_page = $page_num + 1;
             $params = "&mode=list&per_page=$per_page&filter=$filter&page_num=$next_page";
             $url = admin_url('admin.php?page=u3a-contact-form-log' . $params);
-            $HTML .= "<br><p><a href='$url'>Next Page</a>";
-        } else {
-            $url = admin_url('admin.php?page=u3a-contact-form-log&mode=summary');
-            $HTML .= "<br><p><a href='$url'>Back to summary page</a>";
+            $HTML .= "<br><p><a href='$url'>Next Page</a></p>";
         }
         return $HTML;
     }

@@ -1,0 +1,3 @@
+This log will record the name, email address, and email subject entered when a contact is submitted.
+Records are kept for 90 days, and usage is monitored to protect against spam emails.
+You should declare this in your privacy policy on this website before enabling the log.
