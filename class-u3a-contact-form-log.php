@@ -408,43 +408,42 @@ class U3aContactFormLog
         return $HTML;
     }
 
-/**
- * Makes an html table from an array of objects.
- *
- * @param array $data each element must be an object with printable values.
- * @return  the required HTML <table> or '' if no data
- */
+    /**
+     * Makes an html table from an array of objects.
+     *
+     * @param array $data each element must be an object with printable values.
+     * @return  the required HTML <table> or '' if no data
+     */
 
-public static function array_of_objects_to_HTML_table($data) {
-    if (empty($data)) {
-        return '';
-    }
-    $HTML = '<table class= "u3acf_table">' . "\n";
-    // head
-    $HTML .= '  <thead>' . "\n";
-    $HTML .= '    <tr>' . "\n";;
-    $headings = array_keys(get_object_vars($data[0]));
-    $headings = str_replace('_', ' ', $headings);
-    foreach ($headings as $heading) {
-        $HTML .= "<th>$heading</th>";
-    }
-    $HTML .= '    </tr>' . "\n";
-    $HTML .= '  </thead>' . "\n";
-    // body
-    $HTML .= '  <tbody>' . "\n";
-    foreach ($data as $row) {
-        $HTML .= '    <tr>' . "\n";
-        $values = get_object_vars($row);
-        $values = str_replace('@', '@<br>', $values);
-        foreach ($values as $value) {
-            $HTML .= "<td>$value</td>";
+    public static function array_of_objects_to_HTML_table($data) {
+        if (empty($data)) {
+            return '';
+        }
+        $HTML = '<table class= "u3acf_table">' . "\n";
+        // head
+        $HTML .= '  <thead>' . "\n";
+        $HTML .= '    <tr>' . "\n";;
+        $headings = array_keys(get_object_vars($data[0]));
+        $headings = str_replace('_', ' ', $headings);
+        foreach ($headings as $heading) {
+            $HTML .= "<th>$heading</th>";
         }
         $HTML .= '    </tr>' . "\n";
-   }
-    $HTML .= '  </tbody>' . "\n";
-    $HTML .= '</table>' . "\n";
-    return $HTML;
-}
-
+        $HTML .= '  </thead>' . "\n";
+        // body
+        $HTML .= '  <tbody>' . "\n";
+        foreach ($data as $row) {
+            $HTML .= '    <tr>' . "\n";
+            $values = get_object_vars($row);
+            $values = str_replace('@', '@<br>', $values);
+            foreach ($values as $value) {
+                $HTML .= "<td>$value</td>";
+            }
+            $HTML .= '    </tr>' . "\n";
+       }
+        $HTML .= '  </tbody>' . "\n";
+        $HTML .= '</table>' . "\n";
+        return $HTML;
+    }
 }
 
