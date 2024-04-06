@@ -87,12 +87,14 @@ class U3aContactFormLog
     }
 
     /**
-     * Adds a record to the log.
+     * Adds a record to the log, if the log is enabled.
      *
      * @return int the id of the record
      */
     public static function log_message($to_name, $to_email, $reply_name, $reply_email, $subject, $blocked='n', $copy_to_user='n')
     {
+        $log_enabled = get_option('u3a_cf_log_enabled', false);
+        if (!$log_enabled) { return 0; }
         global $wpdb;
         $wpdb->insert( 
             self::$table_name, 
