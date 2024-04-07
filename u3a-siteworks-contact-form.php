@@ -67,7 +67,7 @@ function u3a_contact_form_uninstall()
 function u3a_cf_cron_exec()
 {
     U3aEmailContactsTable::clear_old_contact_instances(2);
-    U3aContactFormLog::clear_old_messages(30);
+    U3aContactFormLog::clear_old_messages(90);
 }
 add_action('u3a_cf_cron_hook', 'u3a_cf_cron_exec');
 
