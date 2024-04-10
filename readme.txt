@@ -1,4 +1,4 @@
-=== u3a-wp-configuration ===
+=== u3a-siteworks-contact-form ===
 Requires at least: 5.9
 Tested up to: 6.4
 Stable tag: 5.9
@@ -13,6 +13,7 @@ Provides shortcodes to create a secure contact form for any email recipient
 This plugin is part of the u3a SiteWorks project. 
 It provides shortcodes to create a contact form links and a secure contact form for any email address. 
 It can also configure WordPress to send email to an SMTP server.
+The name, email address and email subject entered by a user into the form may be logged to aid in the monitoring of spam email. This logging maybe enabled/disabled.
 
 = u3a_contact shortcode =
 
@@ -31,7 +32,7 @@ Example:
 You can also use this alternate form:   
 `[u3a_contact] Freda Smith [/u3a_contact]`  The spaces around the name are optional.
 
-When the shortcode is rendered, the plugin will create a one-time nummeric code which is included in the link to the contact form.  
+When the shortcode is rendered, the plugin will create a nummeric code which is included in the link to the contact form.  
 This is checked by the contact form logic to avoid spammers targeting the form.
 The email address given in the shortcode never appears on the web page.
 
@@ -50,6 +51,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+* Added an optional log of email sent by the contact form. The log may be viewed by an 'administrator' user  
+* Avoid changing the contact id too frequently, to enable pages contining the id to be cached. 
 = 1.0.1 =
 * Bug 987 - Amend start of email message text to include the addressee. (Nov 2023)
 = 1.0.0 =

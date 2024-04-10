@@ -11,9 +11,6 @@ The second attribute can be omitted if the name is the display name of a custom 
 ## Typical Output:
 	<a href="yourdomain/contact_form?id=1234">email Treasurer</a>
 
-## Notes
-The id is a one-time value which will expire when the email has been sent or after 90 minutes.
-
 You must create a page yourdomain/contact_form whose only content should be the shortcode:
 	[u3a_contact_form]
 

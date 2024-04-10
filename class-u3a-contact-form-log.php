@@ -211,6 +211,7 @@ class U3aContactFormLog
     public static function render_log()
     {
         $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : '';
+        $advice = nl2br(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'privacy.txt'));
 
         print <<<END
         <div class="wrap">
@@ -224,10 +225,9 @@ class U3aContactFormLog
             }
             $nonce_code =  wp_nonce_field('u3a_cf_log_enable', 'enable_nonce', true, false);
             $submit_button = get_submit_button('Enable log','primary large','submit', true);
-            $advice = nl2br(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'privacy.txt'));
             print <<<END
             <h3>The log is currently disabled.</h3>
-            <p>Before enabling it, note the following.<br><br>
+            <p>Before enabling it, note the following.<br>
             $advice</p>
             <form method="POST" action="admin-post.php">
                 <input type="hidden" name="action" value="u3a_cf_log_enable">
@@ -240,22 +240,11 @@ class U3aContactFormLog
         }
 
         // Log is currently enabled
+
         if ('enabled-success' == $mode) {
             $info_msg = 'The contact form log has been enabled.';
             print "<div class='notice notice-error is-dismissible inline'><p>$info_msg</p></div>";
         }
-
-        $nonce_code =  wp_nonce_field('u3a_cf_log_disable', 'disable_nonce', true, false);
-        $submit_button = get_submit_button('Delete and disable','primary large','submit', true);
-        print <<<END
-            <h3>The log is currently enabled.</h3>
-            <p>To delete the contents of the log, and disable logging, press 'Delete and disable'.</p>
-            <form method="POST" action="admin-post.php">
-                <input type="hidden" name="action" value="u3a_cf_log_disable">
-                $nonce_code
-                $submit_button
-            </form>
-        END;
 
         if ('list' == $mode) {
             $filter = isset($_GET['filter']) ? sanitize_text_field(urldecode($_GET['filter'])) : '';
@@ -279,13 +268,41 @@ class U3aContactFormLog
             $page_num = ($page_num > 0) ? $page_num : 1; // change default to 1
             print self::display_list($filter, $per_page, $page_num);
             $url = admin_url('admin.php?page=u3a-contact-form-log&mode=summary');
-            print "<p><a href='$url'>Back to summary page</a></p>";
+            $onclick = "window.location.href='$url'";
+            $button = get_submit_button('Back to summary page',
+                'primary large',
+                'button',
+                true,
+                array('onclick'=> $onclick)
+                );
+            print $button;
             print '</div>'; //end class 'wrap'
             return;
         }
 
         // else treat as 'summary' mode
+        print <<<END
+            <h3>The log is currently enabled.</h3>
+            <p>Note the following.<br>
+            $advice</p>
+        END;
 
+        // print delete button inside a form
+        $nonce_code =  wp_nonce_field('u3a_cf_log_disable', 'disable_nonce', true, false);
+        $submit_button = get_submit_button('Delete and disable',
+            'primary large',
+            'submit',
+            true,
+            array('onclick'=>'return confirm("Are you sure you want to delete the log?")')
+            );
+        print <<<END
+            <p>To delete the contents of the log, and disable logging, press 'Delete and disable'.</p>
+            <form method="POST" action="admin-post.php">
+                <input type="hidden" name="action" value="u3a_cf_log_disable">
+                $nonce_code
+                $submit_button
+            </form>
+        END;
         // get summary data
         $days = 90;
         $num_msgs = self::get_count($days, 'all');
@@ -301,37 +318,38 @@ class U3aContactFormLog
         $nonce_code =  wp_nonce_field('u3a_cf_log_list', 'list_nonce', true, false);
         $submit_button = get_submit_button('Show selected messages','primary large','submit', true);
         print <<<END
-        <form method="POST" action="admin-post.php">
-        <input type="hidden" name="action" value="u3a_cf_log_list">
-        $nonce_code
-        <p>You can filter which message you want to see.</p>
-        <table><tr><td>
-        <label for="filter">Filter messages: </label>
-            <select name="filter" id="filter" onchange="u3a_filter_change()" required>
-              <option value="all">All</option>
-              <option value="blocked">Blocked only</option>
-              <option value="email">Specific recipient</option>
-            </select>
-        </td>
-        <td>
-        <label for="per_page">Messages per page: </label>
-            <select name="per_page" id="per_page" required>
-              <option value=25 selected="selected">25</option>
-              <option value=50>50</option>
-              <option value=100>100</option>
-            </select>
-        </td></tr>
-        <tr id="email_choice" style="display:none;">
-        <td>
-            Which recipient email address do you want to filter on?<br>
-            <label for="to_email">Recipient email address: </label>
-            <input type="email" name="to_email" id="to_email" placeholder="Enter the addressee email"/>
+            <form method="POST" action="admin-post.php">
+            <input type="hidden" name="action" value="u3a_cf_log_list">
+            $nonce_code
+            <p>You can filter which message you want to see.</p>
+            <table><tr><td>
+            <label for="filter">Filter messages: </label>
+                <select name="filter" id="filter" onchange="u3a_filter_change()" required>
+                  <option value="all">All</option>
+                  <option value="blocked">Blocked only</option>
+                  <option value="email">Specific recipient</option>
+                </select>
             </td>
-        </tr>
-        </table>
-        </table>
-        $submit_button
-        </form>
+            <td>
+            <label for="per_page">Messages per page: </label>
+                <select name="per_page" id="per_page" required>
+                  <option value=25 selected="selected">25</option>
+                  <option value=50>50</option>
+                  <option value=100>100</option>
+                </select>
+            </td></tr>
+            <tr id="email_choice" style="display:none;">
+            <td>
+                Which recipient email address do you want to filter on?<br>
+                <label for="to_email">Recipient email address: </label>
+                <input type="email" name="to_email" id="to_email" placeholder="Enter the addressee email"/>
+                </td>
+            </tr>
+            </table>
+            </table>
+            $submit_button
+            </form>
+        </div>
         <script>
             function u3a_filter_change() {
                 var email_choice = document.getElementById("email_choice");
