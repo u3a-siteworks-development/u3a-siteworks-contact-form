@@ -1,6 +1,6 @@
 === u3a-siteworks-contact-form ===
 Requires at least: 5.9
-Tested up to: 6.4
+Tested up to: 6.5
 Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -51,6 +51,7 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.1.0 =
 * Added an optional log of email sent by the contact form. The log may be viewed by an 'administrator' user  
 * Avoid changing the contact id too frequently, to enable pages contining the id to be cached. 
 = 1.0.1 =
