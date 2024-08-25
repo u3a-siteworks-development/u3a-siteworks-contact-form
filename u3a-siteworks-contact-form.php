@@ -3,7 +3,7 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.0'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.1'); // Set to current plugin version number
 
 // Use the plugin update service on SiteWorks update server
 
@@ -142,6 +142,9 @@ function u3a_cf_log_table_style($hook)
  * You can also use this alternate form:   
  *           `[u3a_contact] Freda Smith [/u3a_contact]`
  * The spaces around the name are optional.
+ * 
+ * An optional parameter can override the default page used for the contact form
+ *    slug - the slug of the page containing the contact form to use for this contact
  */
 function u3a_contact_shortcode($atts, $content = null)
 {
@@ -179,6 +182,20 @@ function u3a_contact_shortcode($atts, $content = null)
         return '<p style="color: #f00; font-weight: bold;">The email address in the u3a_contact shortcode appears invalid</p>';
     }
 
+    // handle a specific page slug if provided
+    $slug = trim($atts['slug'] ?? '');
+    if (empty($slug)) {
+        $slug = U3A_CONTACT_PAGE_SLUG;
+    } else {
+        // does the specified page slug exist?
+        global $wpdb;
+        $slugfound = $wpdb->get_var("SELECT count(post_title) FROM $wpdb->posts WHERE post_name like '".$slug."'");
+        if ($slugfound < 1) { // if not found, use the default
+            $slug = U3A_CONTACT_PAGE_SLUG;
+        }
+    }
+    
+
     global $wp;
     // set the page on which the shortcode resides
     $source_url = home_url($wp->request);
@@ -186,7 +203,7 @@ function u3a_contact_shortcode($atts, $content = null)
     // $source_url = add_query_arg( $wp->query_vars, home_url( $wp->request ) );
     $contact_id = U3aEmailContactsTable::find_or_add_contact_instance($addressee, $email, $source_url);
 
-    $link = get_bloginfo('url') . '/' . U3A_CONTACT_PAGE_SLUG . '?contact_id=' . $contact_id;
+    $link = get_bloginfo('url') . '/' . $slug . '?contact_id=' . $contact_id;
     $link = esc_url($link);
     $safe_addressee = wp_kses($addressee, []);
     // returned value 
