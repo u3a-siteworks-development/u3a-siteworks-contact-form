@@ -183,13 +183,15 @@ function u3a_contact_shortcode($atts, $content = null)
     }
 
     // handle a specific page slug if provided
-    $slug = trim($atts['slug'] ?? '');
+    $slug = sanitize_title(trim($atts['slug'] ?? ''));
     if (empty($slug)) {
         $slug = U3A_CONTACT_PAGE_SLUG;
     } else {
         // does the specified page slug exist?
         global $wpdb;
-        $slugfound = $wpdb->get_var("SELECT count(post_title) FROM $wpdb->posts WHERE post_name like '".$slug."'");
+        $slugfound = $wpdb->get_var(
+            $wpdb->prepare("SELECT count(post_title) FROM $wpdb->posts WHERE post_name like %s", $slug)
+        );
         if ($slugfound < 1) { // if not found, use the default
             $slug = U3A_CONTACT_PAGE_SLUG;
         }
