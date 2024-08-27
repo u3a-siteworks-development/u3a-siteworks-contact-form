@@ -1,6 +1,6 @@
 === u3a-siteworks-contact-form ===
 Requires at least: 5.9
-Tested up to: 6.5
+Tested up to: 6.6
 Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -35,6 +35,15 @@ You can also use this alternate form:
 When the shortcode is rendered, the plugin will create a nummeric code which is included in the link to the contact form.  
 This is checked by the contact form logic to avoid spammers targeting the form.
 The email address given in the shortcode never appears on the web page.
+
+There is a third parameter available for advanced users:
+* slug - the slug of the page that contains the u3a_contact_form
+
+Example:
+`[u3a_contact name="Freda Smith" slug="slug-of-page"]`
+
+This will override the default behaviour which is to use the page with the slug 'u3a-contact-form'.
+
 
 = u3a_contact_form shortcode =
 
