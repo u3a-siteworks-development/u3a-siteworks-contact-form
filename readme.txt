@@ -60,6 +60,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.1.1 
+* Feature 1071 - Add support for alternate contact form pages defined by the slug parameter in the shortcode
 = 1.1.0 =
 * Added an optional log of email sent by the contact form. The log may be viewed by an 'administrator' user  
 * Avoid changing the contact id too frequently, to enable pages contining the id to be cached. 
