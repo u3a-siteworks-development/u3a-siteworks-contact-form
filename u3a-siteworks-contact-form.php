@@ -237,9 +237,16 @@ function u3a_contact_form_shortcode($atts)
     }
     $email = $contact->email;
     $addressee = $contact->addressee;
+    $defaultReturnEmail = "";
+    $defaultReturnName = "";
     if (!isset($_POST['messageSubject'])) {
         // Not a response to the page, show email form with initial values
-        return show_u3a_contact_form($addressee, '', '', '', '', '', $contact->nonce);
+        if (is_user_logged_in()) {
+            // pre-fill the users email and name.
+            $defaultReturnEmail = wp_get_current_user()->user_email;
+            $defaultReturnName = wp_get_current_user()->display_name;
+        }
+        return show_u3a_contact_form($addressee, '', '', $defaultReturnName, $defaultReturnEmail, '', $contact->nonce);
     }
 
     // Process response to the page
@@ -310,7 +317,7 @@ function u3a_contact_form_shortcode($atts)
         $copy_to_user = 'n';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
             // Only send user a copy if they have used their own email address.
-            if (wp_get_current_user()->user_email == $returnEmail) {
+            if (strcasecmp(wp_get_current_user()->user_email, $returnEmail) == 0) {
                 // send user a copy
                 $copy_to_user = 'y';
                 $copy_status = u3a_contact_mail($reply_to, $messageSubject,
