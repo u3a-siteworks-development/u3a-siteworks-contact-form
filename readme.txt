@@ -60,6 +60,9 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.1.2 =
+* Bug 1080: Autofill name and email address for a logged in user to avoid "Send me a copy" failure if
+email address only differs in letter case
 = 1.1.1 
 * Feature 1071 - Add support for alternate contact form pages defined by the slug parameter in the shortcode
 = 1.1.0 =
