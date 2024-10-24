@@ -60,6 +60,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+
+* Feature 1092 - Add field for phone number to the contact form (not a required field).
 = 1.1.2 =
 * Bug 1080: Autofill name and email address for a logged in user to avoid "Send me a copy" failure if
 email address only differs in letter case

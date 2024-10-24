@@ -237,6 +237,7 @@ function u3a_contact_form_shortcode($atts)
     }
     $email = $contact->email;
     $addressee = $contact->addressee;
+    $phoneNumber = '';
     $defaultReturnEmail = "";
     $defaultReturnName = "";
     if (!isset($_POST['messageSubject'])) {
@@ -246,7 +247,7 @@ function u3a_contact_form_shortcode($atts)
             $defaultReturnEmail = wp_get_current_user()->user_email;
             $defaultReturnName = wp_get_current_user()->display_name;
         }
-        return show_u3a_contact_form($addressee, '', '', $defaultReturnName, $defaultReturnEmail, '', $contact->nonce);
+        return show_u3a_contact_form($addressee, '', '', $defaultReturnName, $defaultReturnEmail, $phoneNumber, '', $contact->nonce);
     }
 
     // Process response to the page
@@ -254,6 +255,7 @@ function u3a_contact_form_shortcode($atts)
     // Get text from form if present
     $messageText = empty($_POST['messageText']) ? '' : sanitize_textarea_field($_POST['messageText']);
     $messageSubject = empty($_POST['messageSubject']) ? '' : sanitize_text_field($_POST['messageSubject']);
+    $phoneNumber = empty($_POST['phoneNumber']) ? '' : sanitize_text_field($_POST['phoneNumber']);
     $returnName = empty($_POST['returnName']) ? '' : sanitize_text_field($_POST['returnName']);
     $returnEmail = empty($_POST['returnEmail']) ? '' : sanitize_email($_POST['returnEmail']);
     // Need to strip slashes? Was backslash added to apostrophe in test string?
@@ -267,7 +269,7 @@ function u3a_contact_form_shortcode($atts)
     // Validate the response
     $message = validate_u3a_contact_form();
     if ('ok' != $message) {
-        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $message, $contact->nonce);
+        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $message, $contact->nonce);
     }
 
     // Response validated, set up the email and optional copy to logged in user
@@ -285,8 +287,9 @@ function u3a_contact_form_shortcode($atts)
     }
     $to = $addressee . ' <' . $email . '>';
     $reply_to = $returnName . ' <' . $returnEmail . '>';
+    $phoneMsg = empty(trim($phoneNumber)) ? 'No phone number provided.' : "Phone: $phoneNumber";
     $separatorLine = "\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
-    $prefix = "<p>The following message was sent via the $orgname web site. It was addressed to $addressee. Please reply to $returnName ( $returnEmail ).$separatorLine";
+    $prefix = "<p>The following message was sent via the $orgname web site.<br>It was addressed to $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
     $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site.$separatorLine";
 
     // replace eols in text with HTML line breaks
@@ -353,7 +356,7 @@ function u3a_contact_form_shortcode($atts)
  * @usedby: u3a_email_contact_shortcode
  */
 
-function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $errorMessage, $nonce)
+function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $errorMessage, $nonce)
 {
     $html = '';
     if ('' != $addressee) {
@@ -384,6 +387,10 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
         <input type='radio' id='memyes' name='u3amember' value='yes'> &nbsp;
         <label for='memno'>No</label>
         <input type='radio' id='memno' name='u3amember' value='no'> &nbsp;
+    </div>
+    <div>
+        <label for="phoneNumber">Your phone number: </label>
+        <input type="tel" name="phoneNumber" id="phoneNumber" value="$phoneNumber"/>
     </div>
     <div>
         <label for="messageSubject">Message subject: </label>
