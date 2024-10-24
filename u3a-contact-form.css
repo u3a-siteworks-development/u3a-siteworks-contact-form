@@ -13,7 +13,7 @@ div.u3aform {
     display: inline-block;
     text-align: right;
     padding-right: 10px;
-    width: 150px;
+    width: 160px;
 }
 
 .u3aform textarea,
@@ -30,6 +30,11 @@ div.u3aform {
 
 .u3aform p.hasSubmit {
     text-align: center;
+}
+
+.u3aform label.requiredLabel:after {
+    content:" *";
+    color: red;
 }
 
 .u3aform :nth-child(3) {

@@ -361,6 +361,7 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     $html = '';
     if ('' != $addressee) {
         $html .= '<p>You can use the form below to send an email to ' . $addressee . '</p>';
+        $html .= '<p>Fields marked <span style="color:#FF0000">*</span> are required</p>';
     }
     if ('' != $errorMessage) {
         $html .= '<p style="color: #f00; font-weight: bold;">' . $errorMessage . '</p>';
@@ -374,11 +375,11 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     <input type="hidden" name="u3aMQDetect" value="test'">
     <div id="show-u3a-contact" class="u3aform">
     <div>
-        <label for="returnName">Your name: </label>
+        <label class=requiredLabel for="returnName">Your name: </label>
         <input type="text" name="returnName" id="returnName" value="$returnName"/>
     </div>
     <div>
-        <label for="returnEmail">Your email address: </label>
+        <label class=requiredLabel for="returnEmail">Your email address: </label>
         <input type="email" name="returnEmail" id="returnEmail" value="$returnEmail"/>
     </div>
     <div id='u3amember'>
@@ -393,11 +394,11 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
         <input type="tel" name="phoneNumber" id="phoneNumber" value="$phoneNumber"/>
     </div>
     <div>
-        <label for="messageSubject">Message subject: </label>
+        <label class=requiredLabel for="messageSubject">Message subject: </label>
         <input type="text" name="messageSubject" id="messageSubject" value="$messageSubject"/>
     </div>
     <div>
-        <label for="messageText">Your message: </label>
+        <label class=requiredLabel for="messageText">Your message: </label>
         <textarea name="messageText" id="messageText" rows="10">$messageText</textarea>
     </div>
     $copyHtml 
