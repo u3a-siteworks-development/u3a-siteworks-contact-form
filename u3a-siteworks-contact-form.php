@@ -389,7 +389,7 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
         <input type='radio' id='memno' name='u3amember' value='no'> &nbsp;
     </div>
     <div>
-        <label for="phoneNumber">Your phone number: </label>
+        <label for="phoneNumber">Your phone number (optional): </label>
         <input type="tel" name="phoneNumber" id="phoneNumber" value="$phoneNumber"/>
     </div>
     <div>
