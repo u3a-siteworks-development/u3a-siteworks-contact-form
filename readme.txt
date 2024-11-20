@@ -1,6 +1,6 @@
 === u3a-siteworks-contact-form ===
 Requires at least: 5.9
-Tested up to: 6.6
+Tested up to: 6.7
 Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -61,6 +61,7 @@ Please refer to the documentation on the [SiteWorks website](https://siteworks.u
 
 == Changelog ==
 
+* Feature 1093 - Add prefix 'u3a enquiry: ' to message subject line
 * Feature 1092 - Add field for phone number to the contact form (not a required field).
 = 1.1.2 =
 * Bug 1080: Autofill name and email address for a logged in user to avoid "Send me a copy" failure if
