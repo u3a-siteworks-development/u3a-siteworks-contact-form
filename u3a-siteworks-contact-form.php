@@ -3,7 +3,7 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.1.0
+ * Version: 1.1.3
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.0'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.3'); // Set to current plugin version number
 
 // Use the plugin update service on SiteWorks update server
 
@@ -142,6 +142,9 @@ function u3a_cf_log_table_style($hook)
  * You can also use this alternate form:   
  *           `[u3a_contact] Freda Smith [/u3a_contact]`
  * The spaces around the name are optional.
+ * 
+ * An optional parameter can override the default page used for the contact form
+ *    slug - the slug of the page containing the contact form to use for this contact
  */
 function u3a_contact_shortcode($atts, $content = null)
 {
@@ -179,6 +182,22 @@ function u3a_contact_shortcode($atts, $content = null)
         return '<p style="color: #f00; font-weight: bold;">The email address in the u3a_contact shortcode appears invalid</p>';
     }
 
+    // handle a specific page slug if provided
+    $slug = sanitize_title(trim($atts['slug'] ?? ''));
+    if (empty($slug)) {
+        $slug = U3A_CONTACT_PAGE_SLUG;
+    } else {
+        // does the specified page slug exist?
+        global $wpdb;
+        $slugfound = $wpdb->get_var(
+            $wpdb->prepare("SELECT count(post_title) FROM $wpdb->posts WHERE post_name like %s", $slug)
+        );
+        if ($slugfound < 1) { // if not found, use the default
+            $slug = U3A_CONTACT_PAGE_SLUG;
+        }
+    }
+    
+
     global $wp;
     // set the page on which the shortcode resides
     $source_url = home_url($wp->request);
@@ -186,7 +205,7 @@ function u3a_contact_shortcode($atts, $content = null)
     // $source_url = add_query_arg( $wp->query_vars, home_url( $wp->request ) );
     $contact_id = U3aEmailContactsTable::find_or_add_contact_instance($addressee, $email, $source_url);
 
-    $link = get_bloginfo('url') . '/' . U3A_CONTACT_PAGE_SLUG . '?contact_id=' . $contact_id;
+    $link = get_bloginfo('url') . '/' . $slug . '?contact_id=' . $contact_id;
     $link = esc_url($link);
     $safe_addressee = wp_kses($addressee, []);
     // returned value 
@@ -218,9 +237,17 @@ function u3a_contact_form_shortcode($atts)
     }
     $email = $contact->email;
     $addressee = $contact->addressee;
+    $phoneNumber = '';
+    $defaultReturnEmail = "";
+    $defaultReturnName = "";
     if (!isset($_POST['messageSubject'])) {
         // Not a response to the page, show email form with initial values
-        return show_u3a_contact_form($addressee, '', '', '', '', '', $contact->nonce);
+        if (is_user_logged_in()) {
+            // pre-fill the users email and name.
+            $defaultReturnEmail = wp_get_current_user()->user_email;
+            $defaultReturnName = wp_get_current_user()->display_name;
+        }
+        return show_u3a_contact_form($addressee, '', '', $defaultReturnName, $defaultReturnEmail, $phoneNumber, '', $contact->nonce);
     }
 
     // Process response to the page
@@ -228,6 +255,7 @@ function u3a_contact_form_shortcode($atts)
     // Get text from form if present
     $messageText = empty($_POST['messageText']) ? '' : sanitize_textarea_field($_POST['messageText']);
     $messageSubject = empty($_POST['messageSubject']) ? '' : sanitize_text_field($_POST['messageSubject']);
+    $phoneNumber = empty($_POST['phoneNumber']) ? '' : sanitize_text_field($_POST['phoneNumber']);
     $returnName = empty($_POST['returnName']) ? '' : sanitize_text_field($_POST['returnName']);
     $returnEmail = empty($_POST['returnEmail']) ? '' : sanitize_email($_POST['returnEmail']);
     // Need to strip slashes? Was backslash added to apostrophe in test string?
@@ -241,7 +269,7 @@ function u3a_contact_form_shortcode($atts)
     // Validate the response
     $message = validate_u3a_contact_form();
     if ('ok' != $message) {
-        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $message, $contact->nonce);
+        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $message, $contact->nonce);
     }
 
     // Response validated, set up the email and optional copy to logged in user
@@ -259,8 +287,9 @@ function u3a_contact_form_shortcode($atts)
     }
     $to = $addressee . ' <' . $email . '>';
     $reply_to = $returnName . ' <' . $returnEmail . '>';
+    $phoneMsg = empty(trim($phoneNumber)) ? 'No phone number provided.' : "Phone: $phoneNumber";
     $separatorLine = "\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
-    $prefix = "<p>The following message was sent via the $orgname web site. It was addressed to $addressee. Please reply to $returnName ( $returnEmail ).$separatorLine";
+    $prefix = "<p>The following message was sent via the $orgname web site.<br>It was addressed to $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
     $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site.$separatorLine";
 
     // replace eols in text with HTML line breaks
@@ -283,6 +312,9 @@ function u3a_contact_form_shortcode($atts)
                     $phpmailer->FromName = $fromName;
                 }, 99);
 
+    // Prefix the subject line with 'u3a enquiry: ' - feature OP1093
+    $messageSubject = 'u3a enquiry: ' . $messageSubject;
+
     // Now send the email(s) and return a result message
 
     $status = u3a_contact_mail($to, $messageSubject, $prefix . $messageHTML, $message_headers, $u3amember);
@@ -291,7 +323,7 @@ function u3a_contact_form_shortcode($atts)
         $copy_to_user = 'n';
         if (is_user_logged_in() && isset($_POST['sendCopy'])) {
             // Only send user a copy if they have used their own email address.
-            if (wp_get_current_user()->user_email == $returnEmail) {
+            if (strcasecmp(wp_get_current_user()->user_email, $returnEmail) == 0) {
                 // send user a copy
                 $copy_to_user = 'y';
                 $copy_status = u3a_contact_mail($reply_to, $messageSubject,
@@ -327,7 +359,7 @@ function u3a_contact_form_shortcode($atts)
  * @usedby: u3a_email_contact_shortcode
  */
 
-function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $errorMessage, $nonce)
+function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $errorMessage, $nonce)
 {
     $html = '';
     if ('' != $addressee) {
@@ -358,6 +390,10 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
         <input type='radio' id='memyes' name='u3amember' value='yes'> &nbsp;
         <label for='memno'>No</label>
         <input type='radio' id='memno' name='u3amember' value='no'> &nbsp;
+    </div>
+    <div>
+        <label for="phoneNumber">Your phone number (optional): </label>
+        <input type="tel" name="phoneNumber" id="phoneNumber" value="$phoneNumber"/>
     </div>
     <div>
         <label for="messageSubject">Message subject: </label>

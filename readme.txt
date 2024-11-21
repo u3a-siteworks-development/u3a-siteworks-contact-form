@@ -1,6 +1,6 @@
 === u3a-siteworks-contact-form ===
 Requires at least: 5.9
-Tested up to: 6.5
+Tested up to: 6.7
 Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -36,6 +36,15 @@ When the shortcode is rendered, the plugin will create a nummeric code which is 
 This is checked by the contact form logic to avoid spammers targeting the form.
 The email address given in the shortcode never appears on the web page.
 
+There is a third parameter available for advanced users:
+* slug - the slug of the page that contains the u3a_contact_form
+
+Example:
+`[u3a_contact name="Freda Smith" slug="slug-of-page"]`
+
+This will override the default behaviour which is to use the page with the slug 'u3a-contact-form'.
+
+
 = u3a_contact_form shortcode =
 
 This should be added to a page which has the page slug 'u3a-contact-form'.
@@ -51,6 +60,14 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+
+* Feature 1093 - Add prefix 'u3a enquiry: ' to message subject line
+* Feature 1092 - Add field for phone number to the contact form (not a required field).
+= 1.1.2 =
+* Bug 1080: Autofill name and email address for a logged in user to avoid "Send me a copy" failure if
+email address only differs in letter case
+= 1.1.1 
+* Feature 1071 - Add support for alternate contact form pages defined by the slug parameter in the shortcode
 = 1.1.0 =
 * Added an optional log of email sent by the contact form. The log may be viewed by an 'administrator' user  
 * Avoid changing the contact id too frequently, to enable pages contining the id to be cached. 
