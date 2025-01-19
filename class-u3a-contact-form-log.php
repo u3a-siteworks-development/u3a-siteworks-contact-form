@@ -1,44 +1,51 @@
 <?php
-class U3aContactFormLog
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
+
+class U3aContactFormLog // phpcs:ignore PSR1.Classes.ClassDeclaration.MissingNamespace
 {
     /**
      * The table_name
      *
-     * @var string 
+     * @var string
      */
     public static $table_name;
-
-    /**
+/**
      * Set up the actions and filters used by this class.
      *
-     * @param $plugin_file the value of __FILE__ from the main plugin file 
+     * @param $plugin_file the value of __FILE__ from the main plugin file
      */
     public static function initialise($plugin_file)
     {
         // set the table name
         global $wpdb;
         self::$table_name = $wpdb->prefix . 'u3a_cf_log';
-        // Add the Contact Form Log to the dashboard
+// Add the Contact Form Log to the dashboard
         add_action('admin_menu', array(self::class, 'log_page'));
-        // Hooks: functions to process the forms in render_log()
+// Hooks: functions to process the forms in render_log()
         add_action('admin_post_u3a_cf_log_list', array(self::class, 'save_display_params'));
         add_action('admin_post_u3a_cf_log_enable', function () {
+
             // check nonce
-            if (check_admin_referer('u3a_cf_log_enable', 'enable_nonce') == false) wp_die('Invalid form submission');
+            if (check_admin_referer('u3a_cf_log_enable', 'enable_nonce') == false) {
+                wp_die('Invalid form submission');
+            }
             update_option('u3a_cf_log_enabled', '1');
             wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log&mode=enabled-success'));
             exit();
-            });
+        });
         add_action('admin_post_u3a_cf_log_disable', function () {
+
             // check nonce
-            if (check_admin_referer('u3a_cf_log_disable', 'disable_nonce') == false) wp_die('Invalid form submission');
+            if (check_admin_referer('u3a_cf_log_disable', 'disable_nonce') == false) {
+                wp_die('Invalid form submission');
+            }
             update_option('u3a_cf_log_enabled', 0);
             U3aContactFormLog::clear_old_messages(-1);
             wp_safe_redirect(admin_url('admin.php?page=u3a-contact-form-log&mode=disabled-success'));
             exit();
-            });
-        
-        // create the database table if it has not yet been created.
+        });
+// create the database table if it has not yet been created.
         $table_exists = get_option('u3a_cf_log_table', false);
         if (!$table_exists) {
             self::create_table();
@@ -72,7 +79,6 @@ class U3aContactFormLog
             PRIMARY KEY  (id),
             KEY (to_email)
         ) $charset_collate;";
-
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
@@ -91,24 +97,30 @@ class U3aContactFormLog
      *
      * @return int the id of the record
      */
-    public static function log_message($to_name, $to_email, $reply_name, $reply_email, $subject, $blocked='n', $copy_to_user='n')
-    {
+    public static function log_message(
+        $to_name,
+        $to_email,
+        $reply_name,
+        $reply_email,
+        $subject,
+        $blocked = 'n',
+        $copy_to_user = 'n'
+    ) {
         $log_enabled = get_option('u3a_cf_log_enabled', false);
-        if (!$log_enabled) { return 0; }
+        if (!$log_enabled) {
+            return 0;
+        }
         global $wpdb;
-        $wpdb->insert( 
-            self::$table_name, 
-            array( 
+        $wpdb->insert(self::$table_name, array(
                 'to_name' => $to_name,
                 'to_email' => $to_email,
                 'reply_name' => $reply_name,
                 'reply_email' => $reply_email,
-                'subject' => substr($subject,0,100),
+                'subject' => substr($subject, 0, 100),
                 'blocked' => $blocked,
                 'copy_to_user' => $copy_to_user,
-                'time_sent' => time(), 
-            ), 
-            array( 
+                'time_sent' => time(),
+            ), array(
                 '%s',
                 '%s',
                 '%s',
@@ -118,8 +130,7 @@ class U3aContactFormLog
                 '%s',
                 '%s',
                 '%d',
-            )
-        );
+            ));
         return $wpdb->insert_id;
     }
 
@@ -130,10 +141,10 @@ class U3aContactFormLog
      * @param  str $which 'all' for all records, 'blocked' for blocked records only.
      * @return int number of matching records
      */
-    public static function get_count($days, $which='all')
+    public static function get_count($days, $which = 'all')
     {
         global $wpdb;
-        $time_limit = time() - $days*86400;
+        $time_limit = time() - $days * 86400;
         $query = "SELECT COUNT(*) as total FROM %i WHERE time_sent >= %d ";
         if ('blocked' == $which) {
             $query .= " AND blocked != 'n' ";
@@ -151,13 +162,13 @@ class U3aContactFormLog
      *                      or 'blocked' for blocked records only,
      *                      or the to_email address of the selected messages
      * @param  int $limit   max number of records to return
-     * @param  int $offset  number of initial records to ignore  
+     * @param  int $offset  number of initial records to ignore
      * @return array        a numbered array of matching records
      */
-    public static function get_list($days, $which='all', $limit=25, $offset=0)
+    public static function get_list($days, $which = 'all', $limit = 25, $offset = 0)
     {
         global $wpdb;
-        $time_limit = time() - $days*86400;
+        $time_limit = time() - $days * 86400;
         $params = [self::$table_name, $time_limit, $limit, $offset];
         $querywhere = "SELECT * FROM %i WHERE time_sent >= %d ";
         $orderby = " ORDER BY time_sent DESC LIMIT %d OFFSET %d";
@@ -166,7 +177,8 @@ class U3aContactFormLog
                 $querywhere .= " AND blocked != 'n' ";
             } else {
                 $querywhere .= " AND to_email = %s";
-                array_splice($params, 2, 0,$which); // add an extra param after $time_limit
+                array_splice($params, 2, 0, $which);
+    // add an extra param after $time_limit
             }
         }
         $results = $wpdb->get_results($wpdb->prepare($querywhere . $orderby, $params));
@@ -176,10 +188,10 @@ class U3aContactFormLog
     /**
      * Delete all messages that were sent more than $days ago.
      */
-    public static function clear_old_messages($days=90)
+    public static function clear_old_messages($days = 90)
     {
         global $wpdb;
-        $stale = time() - $days*86400;
+        $stale = time() - $days * 86400;
         return $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE time_sent< %d", self::$table_name, $stale));
     }
 
@@ -206,13 +218,12 @@ class U3aContactFormLog
      *      mode: 'list' or assumed to be 'summary' in list mode further parameters
      *      filter: 'all', 'blocked' or an addressee email (required)
      *      per-page: number of records to display per page
-     *      page_num: which page of records to display 
+     *      page_num: which page of records to display
      */
     public static function render_log()
     {
         $mode = isset($_GET['mode']) ? sanitize_text_field($_GET['mode']) : '';
         $advice = nl2br(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'privacy.txt'));
-
         print <<<END
         <div class="wrap">
             <h2>Contact form log</h2>
@@ -224,7 +235,7 @@ class U3aContactFormLog
                 print "<div class='notice notice-error is-dismissible inline'><p>$info_msg</p></div>";
             }
             $nonce_code =  wp_nonce_field('u3a_cf_log_enable', 'enable_nonce', true, false);
-            $submit_button = get_submit_button('Enable log','primary large','submit', true);
+            $submit_button = get_submit_button('Enable log', 'primary large', 'submit', true);
             print <<<END
             <h3>The log is currently disabled.</h3>
             <p>Before enabling it, note the following.<br>
@@ -236,7 +247,7 @@ class U3aContactFormLog
             </form>
         </div>
         END;
-        return;
+            return;
         }
 
         // Log is currently enabled
@@ -248,35 +259,40 @@ class U3aContactFormLog
 
         if ('list' == $mode) {
             $filter = isset($_GET['filter']) ? sanitize_text_field(urldecode($_GET['filter'])) : '';
-            // see select options in form in 'summary' mode for valid values
+// see select options in form in 'summary' mode for valid values
             $filter_plain_values = ['all', 'blocked'];
             if (!in_array($filter, $filter_plain_values) && !filter_var($filter, FILTER_VALIDATE_EMAIL)) {
                 print 'In list mode. <br>Missing or invalid filter parameter';
-                print '</div>'; //end class 'wrap'
+                print '</div>';
+            //end class 'wrap'
                 return;
             }
             $per_page = isset($_GET['per_page']) ? (int)($_GET['per_page']) : 25;
-            // see select options in form in 'summary' mode for valid values
+// see select options in form in 'summary' mode for valid values
             $per_page_values = [25, 50, 100];
             if (!in_array($per_page, $per_page_values)) {
                 print 'In list mode. <br>Invalid per_page parameter';
-                print '</div>'; //end class 'wrap'
+                print '</div>';
+            //end class 'wrap'
                 return;
             }
             // (int) gives zero if not numeric input, so $page_num will default to 0 for non numeric input value.
             $page_num = isset($_GET['page_num']) ? (int)($_GET['page_num']) : 0;
-            $page_num = ($page_num > 0) ? $page_num : 1; // change default to 1
+            $page_num = ($page_num > 0) ? $page_num : 1;
+// change default to 1
             print self::display_list($filter, $per_page, $page_num);
             $url = admin_url('admin.php?page=u3a-contact-form-log&mode=summary');
             $onclick = "window.location.href='$url'";
-            $button = get_submit_button('Back to summary page',
+            $button = get_submit_button(
+                'Back to summary page',
                 'primary large',
                 'button',
                 true,
-                array('onclick'=> $onclick)
-                );
+                array('onclick' => $onclick)
+            );
             print $button;
-            print '</div>'; //end class 'wrap'
+            print '</div>';
+//end class 'wrap'
             return;
         }
 
@@ -286,15 +302,15 @@ class U3aContactFormLog
             <p>Note the following.<br>
             $advice</p>
         END;
-
-        // print delete button inside a form
+// print delete button inside a form
         $nonce_code =  wp_nonce_field('u3a_cf_log_disable', 'disable_nonce', true, false);
-        $submit_button = get_submit_button('Delete and disable',
+        $submit_button = get_submit_button(
+            'Delete and disable',
             'primary large',
             'submit',
             true,
-            array('onclick'=>'return confirm("Are you sure you want to delete the log?")')
-            );
+            array('onclick' => 'return confirm("Are you sure you want to delete the log?")')
+        );
         print <<<END
             <p>To delete the contents of the log, and disable logging, press 'Delete and disable'.</p>
             <form method="POST" action="admin-post.php">
@@ -303,20 +319,18 @@ class U3aContactFormLog
                 $submit_button
             </form>
         END;
-        // get summary data
+// get summary data
         $days = 90;
         $num_msgs = self::get_count($days, 'all');
         $num_blocked = self::get_count($days, 'blocked');
-
-        // print summary data
+// print summary data
         print <<<END
         <p> There were $num_msgs messages sent via u3a-contact-form in the last $days days.
         <br>
         This includes $num_blocked messages blocked as spam.</p>
         END;
-
         $nonce_code =  wp_nonce_field('u3a_cf_log_list', 'list_nonce', true, false);
-        $submit_button = get_submit_button('Show selected messages','primary large','submit', true);
+        $submit_button = get_submit_button('Show selected messages', 'primary large', 'submit', true);
         print <<<END
             <form method="POST" action="admin-post.php">
             <input type="hidden" name="action" value="u3a_cf_log_list">
@@ -376,14 +390,18 @@ class U3aContactFormLog
     public static function save_display_params()
     {
         // check nonce
-        if (check_admin_referer('u3a_cf_log_list', 'list_nonce') == false) wp_die('Invalid form submission');
+        if (check_admin_referer('u3a_cf_log_list', 'list_nonce') == false) {
+            wp_die('Invalid form submission');
+        }
 
-        $filter = empty($_POST['filter']) ? 'all' : sanitize_text_field($_POST['filter']);;
+        $filter = empty($_POST['filter']) ? 'all' : sanitize_text_field($_POST['filter']);
+            ;
         if ('email' == $filter) {
             $to_email = empty($_POST['to_email']) ? 'no_email' : sanitize_email($_POST['to_email']);
             $filter = $to_email;
         }
-        $per_page = empty($_POST['per_page']) ? '25' : sanitize_text_field($_POST['per_page']);;
+        $per_page = empty($_POST['per_page']) ? '25' : sanitize_text_field($_POST['per_page']);
+            ;
 
         // redirect back to log page (list mode)
         $filter = urlencode($filter);
@@ -399,14 +417,16 @@ class U3aContactFormLog
      * @param int   $per-page: number of records to display per page
      * @param int   $page_num: which page of records to display
      *
-     * @return str  $HTML 
+     * @return str  $HTML
      */
-    public static function display_list($filter, $per_page=25, $page_num=1) {
+    public static function display_list($filter, $per_page = 25, $page_num = 1)
+    {
         $HTML = "<p> Showing results with filter = $filter.<br>Page: $page_num</p>";
-        $days = 100;  // assumes that database record more than three months old have been deleted
+        $days = 100;
+// assumes that database record more than three months old have been deleted
         $offset = $per_page * ($page_num - 1);
         $email_list = self::get_list($days, $filter, $per_page, $offset);
-        // format time_sent attributes like '2024-02-14 18:30:23'
+// format time_sent attributes like '2024-02-14 18:30:23'
         foreach ($email_list as $row) {
             $row->time_sent = date('Y-m-d H:i:s', $row->time_sent);
         }
@@ -419,7 +439,8 @@ class U3aContactFormLog
         } else {
             $HTML .= "No matching records";
         }
-        if ($count == $per_page) { // there may be more records
+        if ($count == $per_page) {
+// there may be more records
             $next_page = $page_num + 1;
             $params = "&mode=list&per_page=$per_page&filter=$filter&page_num=$next_page";
             $url = admin_url('admin.php?page=u3a-contact-form-log' . $params);
@@ -435,14 +456,16 @@ class U3aContactFormLog
      * @return  the required HTML <table> or '' if no data
      */
 
-    public static function array_of_objects_to_HTML_table($data) {
+    public static function array_of_objects_to_HTML_table($data)
+    {
         if (empty($data)) {
             return '';
         }
         $HTML = '<table class= "u3acf_table">' . "\n";
-        // head
+// head
         $HTML .= '  <thead>' . "\n";
-        $HTML .= '    <tr>' . "\n";;
+        $HTML .= '    <tr>' . "\n";
+            ;
         $headings = array_keys(get_object_vars($data[0]));
         $headings = str_replace('_', ' ', $headings);
         foreach ($headings as $heading) {
@@ -450,7 +473,7 @@ class U3aContactFormLog
         }
         $HTML .= '    </tr>' . "\n";
         $HTML .= '  </thead>' . "\n";
-        // body
+// body
         $HTML .= '  <tbody>' . "\n";
         foreach ($data as $row) {
             $HTML .= '    <tr>' . "\n";
@@ -460,10 +483,9 @@ class U3aContactFormLog
                 $HTML .= "<td>$value</td>";
             }
             $HTML .= '    </tr>' . "\n";
-       }
+        }
         $HTML .= '  </tbody>' . "\n";
         $HTML .= '</table>' . "\n";
         return $HTML;
     }
 }
-

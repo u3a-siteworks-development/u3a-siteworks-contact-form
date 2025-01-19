@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore Generic.Files.LineEndings.InvalidEOLChar
 
 /**
  * Plugin Name: u3a SiteWorks Contact Form
@@ -11,7 +11,9 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.3'); // Set to current plugin version number
 
@@ -48,8 +50,8 @@ function u3a_contact_form_deactivation()
     /* de-register the shortcodes */
     remove_shortcode('u3a_contact_form');
     remove_shortcode('u3a_contact');
-    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
-    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
+    $timestamp = wp_next_scheduled('u3a_cf_cron_hook');
+    wp_unschedule_event($timestamp, 'u3a_cf_cron_hook');  // unschedules all future events
 }
 register_uninstall_hook(__FILE__, 'u3a_contact_form_uninstall');
 function u3a_contact_form_uninstall()
@@ -57,8 +59,8 @@ function u3a_contact_form_uninstall()
     U3aEmailContactsTable::delete_table();
     U3aContactFormLog::delete_table();
     u3a_contact_form_delete_page();
-    $timestamp = wp_next_scheduled( 'u3a_cf_cron_hook' );
-    wp_unschedule_event( $timestamp, 'u3a_cf_cron_hook' );  // unschedules all future events
+    $timestamp = wp_next_scheduled('u3a_cf_cron_hook');
+    wp_unschedule_event($timestamp, 'u3a_cf_cron_hook');  // unschedules all future events
 }
 
 /**
@@ -86,10 +88,10 @@ function u3a_cf_schedule_cron()
     $date->setTimestamp(time());
     // Reset hours, minutes and seconds to zero.
     $date->setTime(0, 0, 0);
-    $tomorrow_4am = $date->getTimestamp() + 86400 + (4*3600);
-    wp_schedule_event($tomorrow_4am, 'daily', 'u3a_cf_cron_hook' );
+    $tomorrow_4am = $date->getTimestamp() + 86400 + (4 * 3600);
+    wp_schedule_event($tomorrow_4am, 'daily', 'u3a_cf_cron_hook');
 }
-add_action('init','u3a_cf_schedule_cron');
+add_action('init', 'u3a_cf_schedule_cron');
 
 
 /* Register the shortcodes */
@@ -104,27 +106,29 @@ add_action('wp_enqueue_scripts', 'u3a_contact_form_style');
 
 function u3a_contact_form_style()
 {
-    wp_enqueue_style('u3a-contact-form',
-                     plugin_dir_url(__FILE__) . 'u3a-contact-form.css',
-                     array(),
-                     U3A_SITEWORKS_CONTACT_FORM_VERSION,
-                     false
-                     );
+    wp_enqueue_style(
+        'u3a-contact-form',
+        plugin_dir_url(__FILE__) . 'u3a-contact-form.css',
+        array(),
+        U3A_SITEWORKS_CONTACT_FORM_VERSION,
+        false
+    );
 }
 // Load CSS for the contact form admin page log table
 add_action('admin_enqueue_scripts', 'u3a_cf_log_table_style');
 
 function u3a_cf_log_table_style($hook)
 {
-    if (!(str_contains($hook,'u3a-contact-form-log'))) {
+    if (!(str_contains($hook, 'u3a-contact-form-log'))) {
         return;
     }
-    wp_enqueue_style('u3a-cf-log-table',
-                     plugin_dir_url(__FILE__) . 'u3a-cf-log-table.css',
-                     array(),
-                     U3A_SITEWORKS_CONTACT_FORM_VERSION,
-                     false
-                     );
+    wp_enqueue_style(
+        'u3a-cf-log-table',
+        plugin_dir_url(__FILE__) . 'u3a-cf-log-table.css',
+        array(),
+        U3A_SITEWORKS_CONTACT_FORM_VERSION,
+        false
+    );
 }
 
 /**
@@ -133,16 +137,17 @@ function u3a_cf_log_table_style($hook)
  *
  * The shortcode requires either 1 or 2 parameters:
  *    name - the name of the recipient (required)
- *    email - the recipient's email address (required unless name is already a u3a Contact) 
+ *    email - the recipient's email address (required unless name is already a u3a Contact)
  * Example:  `[u3a_contact name="Freda Smith" email="freda@example.com"]`
- * 
- * If the contact is already included in the u3a Contacts database and an email address is specified there, you can omit the email address.
+ *
+ * If the contact is already included in the u3a Contacts database and an email
+ * address is specified there, you can omit the email address.
  * Example:  `[u3a_contact name="Freda Smith"]`
- * 
- * You can also use this alternate form:   
+ *
+ * You can also use this alternate form:
  *           `[u3a_contact] Freda Smith [/u3a_contact]`
  * The spaces around the name are optional.
- * 
+ *
  * An optional parameter can override the default page used for the contact form
  *    slug - the slug of the page containing the contact form to use for this contact
  */
@@ -156,7 +161,8 @@ function u3a_contact_shortcode($atts, $content = null)
     $addressee = html_entity_decode($addressee); // as WordPress converts some chars to HTML entities
     // exit if no addressee
     if ('' == trim($addressee)) {
-        return '<p style="color: #f00; font-weight: bold;">The u3a_contact shortcode does not have an addressee parameter</p>';
+        return '<p style="color: #f00; font-weight: bold;">
+        The u3a_contact shortcode does not have an addressee parameter</p>';
     }
 
     $email = trim($atts['email'] ?? '');
@@ -170,16 +176,19 @@ function u3a_contact_shortcode($atts, $content = null)
         }
         // exit if no email found
         if ($email == '') {
-            return '<p style="color: #f00; font-weight: bold;">The u3a_contact addressee is not known or has no email address</p>';
+            return '<p style="color: #f00; font-weight: bold;">
+            The u3a_contact addressee is not known or has no email address</p>';
         }
     }
     // exit if no email
     if ($email == '') {
-        return '<p style="color: #f00; font-weight: bold;">The u3a_contact shortcode does not have an email parameter</p>';
+        return '<p style="color: #f00; font-weight: bold;">
+        The u3a_contact shortcode does not have an email parameter</p>';
     }
     // exit if email doesn't parse
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return '<p style="color: #f00; font-weight: bold;">The email address in the u3a_contact shortcode appears invalid</p>';
+        return '<p style="color: #f00; font-weight: bold;">
+        The email address in the u3a_contact shortcode appears invalid</p>';
     }
 
     // handle a specific page slug if provided
@@ -196,7 +205,7 @@ function u3a_contact_shortcode($atts, $content = null)
             $slug = U3A_CONTACT_PAGE_SLUG;
         }
     }
-    
+
 
     global $wp;
     // set the page on which the shortcode resides
@@ -208,7 +217,7 @@ function u3a_contact_shortcode($atts, $content = null)
     $link = get_bloginfo('url') . '/' . $slug . '?contact_id=' . $contact_id;
     $link = esc_url($link);
     $safe_addressee = wp_kses($addressee, []);
-    // returned value 
+    // returned value
     return "<a title='Opens message form'  href='$link'>$safe_addressee</a>";
 }
 
@@ -220,15 +229,18 @@ function u3a_contact_shortcode($atts, $content = null)
  * When processing a page where the form has been created and validly completed
  * it will send out the required email(s), and return a success message.
  * It also gives a logged-in user the option of sending a copy of the message to their specified return email address.
- * If processing a page with a valid contact_id but where the form not been submitted, or submitted with validation errors, it will return the HTML form, with a suitable error message where appropriate.
+ * If processing a page with a valid contact_id but where the form not been submitted,
+ * or submitted with validation errors, it will return the HTML form, with a suitable error message where appropriate.
  *
- * @return str HTML for the form and/or messages.
+ * @return string HTML for the form and/or messages.
  */
 function u3a_contact_form_shortcode($atts)
 {
     if (!isset($_GET['contact_id'])) {
-        return '<p>You appear to have come directly to this page. To work correctly, you need to use this page via specially-constructed links on this web site.</p>
-        <p>This technique ensures that spammers cannot use a link copied from this site to repeatedly email people.</p>';
+        return '<p>You appear to have come directly to this page. To work correctly,
+         you need to use this page via specially-constructed links on this web site.</p>
+        <p>This technique ensures that spammers cannot use a link copied from this site to 
+        repeatedly email people.</p>';
     }
     $contact_id = $_GET['contact_id'];
     $contact = U3aEmailContactsTable::get_contact_instance($contact_id);
@@ -247,7 +259,16 @@ function u3a_contact_form_shortcode($atts)
             $defaultReturnEmail = wp_get_current_user()->user_email;
             $defaultReturnName = wp_get_current_user()->display_name;
         }
-        return show_u3a_contact_form($addressee, '', '', $defaultReturnName, $defaultReturnEmail, $phoneNumber, '', $contact->nonce);
+        return show_u3a_contact_form(
+            $addressee,
+            '',
+            '',
+            $defaultReturnName,
+            $defaultReturnEmail,
+            $phoneNumber,
+            '',
+            $contact->nonce
+        );
     }
 
     // Process response to the page
@@ -269,7 +290,16 @@ function u3a_contact_form_shortcode($atts)
     // Validate the response
     $message = validate_u3a_contact_form();
     if ('ok' != $message) {
-        return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $message, $contact->nonce);
+        return show_u3a_contact_form(
+            $addressee,
+            $messageSubject,
+            $messageText,
+            $returnName,
+            $returnEmail,
+            $phoneNumber,
+            $message,
+            $contact->nonce
+        );
     }
 
     // Response validated, set up the email and optional copy to logged in user
@@ -289,7 +319,8 @@ function u3a_contact_form_shortcode($atts)
     $reply_to = $returnName . ' <' . $returnEmail . '>';
     $phoneMsg = empty(trim($phoneNumber)) ? 'No phone number provided.' : "Phone: $phoneNumber";
     $separatorLine = "\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
-    $prefix = "<p>The following message was sent via the $orgname web site.<br>It was addressed to $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
+    $prefix = "<p>The following message was sent via the $orgname web site.<br>It was addressed to
+     $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
     $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site.$separatorLine";
 
     // replace eols in text with HTML line breaks
@@ -307,10 +338,13 @@ function u3a_contact_form_shortcode($atts)
         'From: ' . $fromName . ' <' . $fromEmail . '>',
     );
     // In case php_mailer_init is used, set FromName in an action with priority that will be run last.
-    add_action('phpmailer_init',
-                function($phpmailer) use ($fromName) {
-                    $phpmailer->FromName = $fromName;
-                }, 99);
+    add_action(
+        'phpmailer_init',
+        function ($phpmailer) use ($fromName) {
+            $phpmailer->FromName = $fromName;
+        },
+        99
+    );
 
     // Prefix the subject line with 'u3a enquiry: ' - feature OP1093
     $messageSubject = 'u3a enquiry: ' . $messageSubject;
@@ -326,9 +360,13 @@ function u3a_contact_form_shortcode($atts)
             if (strcasecmp(wp_get_current_user()->user_email, $returnEmail) == 0) {
                 // send user a copy
                 $copy_to_user = 'y';
-                $copy_status = u3a_contact_mail($reply_to, $messageSubject,
-                                           $copyPrefix . $messageHTML, $copy_message_headers);
-                if ('ok'== $copy_status) {
+                $copy_status = u3a_contact_mail(
+                    $reply_to,
+                    $messageSubject,
+                    $copyPrefix . $messageHTML,
+                    $copy_message_headers
+                );
+                if ('ok' == $copy_status) {
                     $result_message .= '<p>Message copy sent to you.</p>';
                 } else {
                     $result_message .=
@@ -341,8 +379,15 @@ function u3a_contact_form_shortcode($atts)
             }
         }
     // log the message
-    U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
-                                    $u3amember, $copy_to_user);
+        U3aContactFormLog::log_message(
+            $addressee,
+            $email,
+            $returnName,
+            $returnEmail,
+            $messageSubject,
+            $u3amember,
+            $copy_to_user
+        );
     } else {
         $result_message =
             '<p>Sorry there was a problem sending your message. Please try again later.</p>';
@@ -353,14 +398,22 @@ function u3a_contact_form_shortcode($atts)
 
 /**
  * Returns an HTML form for sending an email message to an addressee, possibly with an error message.
- * 
- * @param str $nonce not used in this version
- * @return str HMTL including a form
+ *
+ * @param string $nonce not used in this version
+ * @return string HMTL including a form
  * @usedby: u3a_email_contact_shortcode
  */
 
-function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $errorMessage, $nonce)
-{
+function show_u3a_contact_form(
+    $addressee,
+    $messageSubject,
+    $messageText,
+    $returnName,
+    $returnEmail,
+    $phoneNumber,
+    $errorMessage,
+    $nonce
+) {
     $html = '';
     if ('' != $addressee) {
         $html .= '<p>You can use the form below to send an email to ' . $addressee . '</p>';
@@ -370,7 +423,8 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     }
     $copyHtml = '';
     if (is_user_logged_in()) {
-        $copyHtml = '<div><label for="sendCopy">Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
+        $copyHtml = '<div><label for="sendCopy">
+        Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
     }
     $html .= <<< END
 <form id="mailContact" method="post">
@@ -404,7 +458,8 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
         <textarea name="messageText" id="messageText" rows="10">$messageText</textarea>
     </div>
     $copyHtml 
-    <p class="hasSubmit"><button class="wp-element-button" id="submitButton" name="sendEmail" type="submit">Send your email</button></p>
+    <p class="hasSubmit"><button class="wp-element-button" id="submitButton" 
+    name="sendEmail" type="submit">Send your email</button></p>
     </div>
 </form>
 <script type="text/javascript">
@@ -416,7 +471,7 @@ END;
 
 /**
  * Validate the POST data submitted in the form.
- * @return An error message if not validated, else 'ok'.
+ * @return string An error message if not validated, else 'ok'.
  */
 
 function validate_u3a_contact_form()
@@ -440,9 +495,9 @@ function validate_u3a_contact_form()
 }
 
 /** Send the message using wp_mail.
- * @return str 'ok' on success, else error message
+ * @return string 'ok' on success, else error message
  */
-function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [], $blocked='n')
+function u3a_contact_mail($to, $messageSubject, $messageText, $headers = [], $blocked = 'n')
 {
     if ('n' != $blocked) {
         return 'ok';
@@ -467,10 +522,12 @@ END;
     // Append header specifying content type (default is text/plain)
     $headers[] = 'Content-Type: text/html; charset=UTF-8';
     // Generate plain text alt body from the html
-    add_action('phpmailer_init',
-                function ($phpmailer) {
-                    $phpmailer->AltBody = wp_strip_all_tags(str_replace('<br/>', PHP_EOL,$phpmailer->Body));
-               });
+    add_action(
+        'phpmailer_init',
+        function ($phpmailer) {
+            $phpmailer->AltBody = wp_strip_all_tags(str_replace('<br/>', PHP_EOL, $phpmailer->Body));
+        }
+    );
     $result = wp_mail($to, $messageSubject, $html_start . $messageText . $html_end, $headers);
     return (true === $result) ? 'ok' : 'wp_mail error';
 }
@@ -501,7 +558,8 @@ function u3a_contact_form_create_page()
 
 function u3a_contact_form_set_states($states, $post)
 {
-    if (('page' == $post->post_type)
+    if (
+        ('page' == $post->post_type)
         && (U3A_CONTACT_PAGE_SLUG == $post->post_name)
     ) {
         $states[] = 'Contact Form Page, do not remove';
@@ -516,4 +574,3 @@ function u3a_contact_form_delete_page()
         wp_delete_post($page[0]->ID, true);
     }
 }
-
