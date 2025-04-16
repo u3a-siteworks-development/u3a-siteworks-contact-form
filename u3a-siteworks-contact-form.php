@@ -3,29 +3,37 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.1.3
+ * Version: 1.2.0
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
  * License: GPLv2
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Requires Plugins: u3a-siteworks-configuration
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.1.3'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.2.0'); // Set to current plugin version number
 
-// Use the plugin update service on SiteWorks update server
+// Use the plugin update service provided in the Configuration plugin
 
-require 'inc/plugin-update-checker/plugin-update-checker.php';
-
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-$u3acfUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://siteworks.u3a.org.uk/wp-update-server/?action=get_metadata&slug=u3a-siteworks-contact-form', //Metadata URL
-    __FILE__, //Full path to the main plugin file or functions.php.
-    'u3a-siteworks-contact-form'
+add_action(
+    'plugins_loaded',
+    function () {
+        if (function_exists('u3a_plugin_update_setup')) {
+            u3a_plugin_update_setup('u3a-siteworks-contact-form', __FILE__);
+        } else {
+            add_action(
+                'admin_notices',
+                function () {
+                    print '<div class="error"><p>SiteWorks Contact Form plugin unable to check for updates as the SiteWorks Configuration plugin is not active.</p></div>';
+                }
+            );
+        }
+    }
 );
+
 
 // set the page which will hold the contact form.
 // Ideally we should set this in the plugin's settings
