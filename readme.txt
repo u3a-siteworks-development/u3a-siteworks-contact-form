@@ -1,6 +1,6 @@
 === u3a-siteworks-contact-form ===
 Requires at least: 5.9
-Tested up to: 6.7
+Tested up to: 6.8
 Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -60,7 +60,10 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
-
+= 1.2.0 =
+* Tested with WordPress 6.8
+* Code refactored to access plugin update service via configuration plugin
+= 1.1.3 =
 * Feature 1093 - Add prefix 'u3a enquiry: ' to message subject line
 * Feature 1092 - Add field for phone number to the contact form (not a required field).
 = 1.1.2 =
