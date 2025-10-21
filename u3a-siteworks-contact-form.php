@@ -3,7 +3,7 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
@@ -14,7 +14,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.2.0'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.2.1'); // Set to current plugin version number
 
 // Use the plugin update service provided in the Configuration plugin
 

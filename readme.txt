@@ -60,6 +60,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.2.1 =
+* Avoid multiple submissions of duplicate emails
 = 1.2.0 =
 * Tested with WordPress 6.8
 * Code refactored to access plugin update service via configuration plugin
