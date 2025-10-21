@@ -135,6 +135,21 @@ function u3a_cf_log_table_style($hook)
                      );
 }
 
+// Get a hash value of a message which may have already been delivered.
+function get_message_hash(
+    $addressee,
+    $messageSubject,
+    $messageText,
+    $returnName,
+    $returnEmail
+) {
+    return hash('sha256', $addressee .
+    $messageSubject .
+    $messageText .
+    $returnName .
+    $returnEmail);
+}
+
 /**
  * Returns a safe HTML link to the contact form page,
  * with a query parameter 'contact_id' set to the id of the contact instance in the db.
@@ -274,8 +289,16 @@ function u3a_contact_form_shortcode($atts)
         $messageSubject = stripslashes($messageSubject);
     }
 
+    $messagehash = get_message_hash(
+        $addressee,
+        $messageSubject,
+        $messageText,
+        $returnName,
+        $returnEmail
+    );
+
     // Validate the response
-    $message = validate_u3a_contact_form();
+    $message = validate_u3a_contact_form($messagehash);
     if ('ok' != $message) {
         return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $message, $contact->nonce);
     }
@@ -348,6 +371,8 @@ function u3a_contact_form_shortcode($atts)
                     ' and no copy has been sent to you.</p>';
             }
         }
+        // record the message as a transient for re-post checking
+        set_transient($messagehash, "true", 30);
     // log the message
     U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
                                     $u3amember, $copy_to_user);
@@ -427,7 +452,7 @@ END;
  * @return An error message if not validated, else 'ok'.
  */
 
-function validate_u3a_contact_form()
+function validate_u3a_contact_form($messagehash)
 {
     if (empty($_POST['messageSubject'])) {
         return "You must enter a subject for your email";
@@ -443,6 +468,11 @@ function validate_u3a_contact_form()
     }
     if (!filter_var($_POST['returnEmail'], FILTER_VALIDATE_EMAIL)) {
         return "The email address you entered does not seem to be valid";
+    }
+    if (get_transient($messagehash)) {
+        // Set it again so the timeout keeps refreshing if the post keeps re-sending
+        set_transient($messagehash, "true", 30);
+        return "This message has already been delivered";
     }
     return 'ok';
 }
