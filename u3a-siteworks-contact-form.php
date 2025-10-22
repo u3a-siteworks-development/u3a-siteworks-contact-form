@@ -298,10 +298,18 @@ function u3a_contact_form_shortcode($atts)
     );
 
     // Validate the response
-    $message = validate_u3a_contact_form($messagehash);
+    $message = validate_u3a_contact_form();
     if ('ok' != $message) {
         return show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $message, $contact->nonce);
     }
+
+    // check for repeated identical messages
+    if (get_transient($messagehash)) {
+        // Set it again so the timeout keeps refreshing if the post keeps re-sending
+        set_transient($messagehash, "true", 300);
+        return "<p>Your message has already been sent.</p>";
+    }
+
 
     // Response validated, set up the email and optional copy to logged in user
 
@@ -372,7 +380,7 @@ function u3a_contact_form_shortcode($atts)
             }
         }
         // record the message as a transient for re-post checking
-        set_transient($messagehash, "true", 30);
+        set_transient($messagehash, "true", 300);
     // log the message
     U3aContactFormLog::log_message($addressee, $email, $returnName, $returnEmail, $messageSubject,
                                     $u3amember, $copy_to_user);
@@ -452,7 +460,7 @@ END;
  * @return An error message if not validated, else 'ok'.
  */
 
-function validate_u3a_contact_form($messagehash)
+function validate_u3a_contact_form()
 {
     if (empty($_POST['messageSubject'])) {
         return "You must enter a subject for your email";
@@ -468,11 +476,6 @@ function validate_u3a_contact_form($messagehash)
     }
     if (!filter_var($_POST['returnEmail'], FILTER_VALIDATE_EMAIL)) {
         return "The email address you entered does not seem to be valid";
-    }
-    if (get_transient($messagehash)) {
-        // Set it again so the timeout keeps refreshing if the post keeps re-sending
-        set_transient($messagehash, "true", 30);
-        return "This message has already been delivered";
     }
     return 'ok';
 }
