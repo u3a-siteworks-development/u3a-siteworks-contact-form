@@ -285,6 +285,7 @@ function u3a_contact_form_shortcode($atts)
     $u3aMQDetect = $_POST['u3aMQDetect'];
     $needStripSlashes = (strlen($u3aMQDetect) > 5) ? true : false;
     if ($needStripSlashes) {
+        $returnName = stripslashes($returnName);
         $messageText = stripslashes($messageText);
         $messageSubject = stripslashes($messageSubject);
     }
