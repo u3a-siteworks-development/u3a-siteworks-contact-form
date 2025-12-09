@@ -285,6 +285,8 @@ function u3a_contact_form_shortcode($atts)
     $u3aMQDetect = $_POST['u3aMQDetect'];
     $needStripSlashes = (strlen($u3aMQDetect) > 5) ? true : false;
     if ($needStripSlashes) {
+        $returnName = stripslashes($returnName);
+        $returnEmail = stripslashes($returnEmail);
         $messageText = stripslashes($messageText);
         $messageSubject = stripslashes($messageSubject);
     }
@@ -474,7 +476,7 @@ function validate_u3a_contact_form()
     if (empty($_POST['returnEmail'])) {
         return "You must enter your email address so your recipient(s) can get back to you";
     }
-    if (!filter_var($_POST['returnEmail'], FILTER_VALIDATE_EMAIL)) {
+    if (!filter_var(stripslashes($_POST['returnEmail']), FILTER_VALIDATE_EMAIL)) {
         return "The email address you entered does not seem to be valid";
     }
     return 'ok';
