@@ -3,7 +3,7 @@
 /**
  * Plugin Name: u3a SiteWorks Contact Form
  * Description: Provides shortcodes to create a secure contact form for any email recipient
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: u3a SiteWorks team
  * Author URI: https://siteworks.u3a.org.uk/
  * Plugin URI: https://siteworks.u3a.org.uk/
@@ -14,7 +14,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.2.1'); // Set to current plugin version number
+define('U3A_SITEWORKS_CONTACT_FORM_VERSION', '1.2.2'); // Set to current plugin version number
 
 // Use the plugin update service provided in the Configuration plugin
 
@@ -249,15 +249,26 @@ function u3a_contact_shortcode($atts, $content = null)
  */
 function u3a_contact_form_shortcode($atts)
 {
-    if (!isset($_GET['contact_id'])) {
+    $contact_id = $_GET['contact_id'] ?? ''; // so set to empty string if query parameter not present
+    $contact = null;
+    if ($contact_id) {
+        $contact = U3aEmailContactsTable::get_contact_instance($contact_id);
+        if (null === $contact) {
+            return '<p>Sorry, the link you used is no longer valid. Please try later.</p>';
+        }
+    }
+    /**
+     * Filters the contact to whom the email is to be sent.
+     *
+     * @param object $contact either an object representing a record in the contact form table
+     *                        or null if no valid contact exists.
+     */
+    $contact = apply_filters('u3a_email_contact', $contact);
+    if (!$contact) {
         return '<p>You appear to have come directly to this page. To work correctly, you need to use this page via specially-constructed links on this web site.</p>
         <p>This technique ensures that spammers cannot use a link copied from this site to repeatedly email people.</p>';
     }
-    $contact_id = $_GET['contact_id'];
-    $contact = U3aEmailContactsTable::get_contact_instance($contact_id);
-    if (null === $contact) {
-        return '<p>Sorry, the link you used is no longer valid. Please try later.</p>';
-    }
+
     $email = $contact->email;
     $addressee = $contact->addressee;
     $phoneNumber = '';
@@ -344,6 +355,15 @@ function u3a_contact_form_shortcode($atts)
         'From: ' . $fromName . ' <' . $fromEmail . '>',
         'Reply-To: ' . $reply_to,
     );
+
+    /**
+     * Filters the message headers of the email to be sent.
+     *
+     * @param array $message_headers, includes From and Reply-To items
+     * 
+     */
+    $message_headers = apply_filters('u3a_email_message_headers', $message_headers);
+
     $copy_message_headers = array(
         'From: ' . $fromName . ' <' . $fromEmail . '>',
     );
@@ -405,8 +425,16 @@ function u3a_contact_form_shortcode($atts)
 function show_u3a_contact_form($addressee, $messageSubject, $messageText, $returnName, $returnEmail, $phoneNumber, $errorMessage, $nonce)
 {
     $html = '';
-    if ('' != $addressee) {
-        $html .= '<p>You can use the form below to send an email to ' . $addressee . '</p>';
+    /**
+     * Filters the text shown as addressee at the top of the form
+     *
+     * @param string $addressee, the name of the recipient
+     * 
+     */
+    $addressee = apply_filters('u3a_email_shown_addressee', $addressee);
+    $safe_addressee = wp_kses($addressee, []);
+    if ('' != $safe_addressee) {
+        $html .= '<p>You can use the form below to send an email to ' . $safe_addressee . '</p>';
     }
     if ('' != $errorMessage) {
         $html .= '<p style="color: #f00; font-weight: bold;">' . $errorMessage . '</p>';
