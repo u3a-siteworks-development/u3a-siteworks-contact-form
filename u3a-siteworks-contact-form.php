@@ -231,8 +231,9 @@ function u3a_contact_shortcode($atts, $content = null)
     $link = get_bloginfo('url') . '/' . $slug . '?contact_id=' . $contact_id;
     $link = esc_url($link);
     $safe_addressee = wp_kses($addressee, []);
-    // returned value 
-    return "<a title='Opens message form'  href='$link'>$safe_addressee</a>";
+    // returned value
+    // v1.2.2 added rel='nofollow' to discourage robots from going to contact form page.
+    return "<a title='Opens message form'  href='$link' rel='nofollow'>$safe_addressee</a>";
 }
 
 /**
@@ -249,6 +250,8 @@ function u3a_contact_shortcode($atts, $content = null)
  */
 function u3a_contact_form_shortcode($atts)
 {
+    // v1.2.2 added a header to tell search engines not to index this page.
+    header("X-Robots-Tag: noindex, nofollow", true);
     $contact_id = $_GET['contact_id'] ?? ''; // so set to empty string if query parameter not present
     $contact = null;
     if ($contact_id) {
@@ -285,7 +288,6 @@ function u3a_contact_form_shortcode($atts)
     }
 
     // Process response to the page
-
     // Get text from form if present
     $messageText = empty($_POST['messageText']) ? '' : sanitize_textarea_field($_POST['messageText']);
     $messageSubject = empty($_POST['messageSubject']) ? '' : sanitize_text_field($_POST['messageSubject']);
@@ -340,8 +342,13 @@ function u3a_contact_form_shortcode($atts)
     $to = $addressee . ' <' . $email . '>';
     $reply_to = $returnName . ' <' . $returnEmail . '>';
     $phoneMsg = empty(trim($phoneNumber)) ? 'No phone number provided.' : "Phone: $phoneNumber";
+    $source_text = '';
+    if (!empty($contact->source_url)){
+        $source= str_replace(get_site_url(),'', $contact->source_url); 
+        $source_text = ", from a contact on page $source";
+    }
     $separatorLine = "\n\n<div style=\"height: 10px; border-top: 1px dotted #444;\"></div>";
-    $prefix = "<p>The following message was sent via the $orgname web site.<br>It was addressed to $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
+    $prefix = "<p>The following message was sent via the $orgname web site$source_text.<br>It was addressed to $addressee.<br>Please reply to $returnName ( $returnEmail ). $phoneMsg</p>$separatorLine";
     $copyPrefix = "<p>This is a copy of your message sent to $addressee via the $orgname web site.$separatorLine";
 
     // replace eols in text with HTML line breaks
