@@ -61,7 +61,9 @@ Please refer to the documentation on the [SiteWorks website](https://siteworks.u
 
 == Changelog ==
 = 1.2.2 =
+* Added rel='nofollow' to discourage robots from going to contact form page.
 * Added 3 hooks to enable other sources of contact data
+* Added source group name to contact email template
 = 1.2.1 =
 * Avoid multiple submissions of duplicate emails
 = 1.2.0 =
