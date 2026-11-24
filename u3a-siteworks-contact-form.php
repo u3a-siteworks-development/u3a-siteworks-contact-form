@@ -450,6 +450,11 @@ function show_u3a_contact_form($addressee, $messageSubject, $messageText, $retur
     if (is_user_logged_in()) {
         $copyHtml = '<div><label for="sendCopy">Send me a copy: </label><input type="checkbox" name="sendCopy" id="sendCopy" value="sendCopy"/></div>';
     }
+    $returnName = esc_attr($returnName);
+    $returnEmail = esc_attr($returnEmail);
+    $phoneNumber = esc_attr($phoneNumber);
+    $messageSubject = esc_attr($messageSubject);
+    $messageText = esc_textarea($messageText);
     $html .= <<< END
 <form id="mailContact" method="post">
     <input type="hidden" name="u3aMQDetect" value="test'">
