@@ -60,6 +60,8 @@ Example:
 Please refer to the documentation on the [SiteWorks website](https://siteworks.u3a.org.uk/u3a-siteworks-training/)
 
 == Changelog ==
+= 1.2.3 =
+* Added further escaping to input fields
 = 1.2.2 =
 * Added rel='nofollow' to discourage robots from going to contact form page.
 * Added 3 hooks to enable other sources of contact data
